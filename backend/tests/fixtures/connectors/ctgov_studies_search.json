@@ -1,0 +1,196 @@
+{
+ "_fixture_note": "HAND-CONSTRUCTED FIXTURE — shape follows the documented ClinicalTrials.gov API v2 schema; field VALUES are illustrative and are NOT real trial data.",
+ "endpoint": "https://clinicaltrials.gov/api/v2/studies",
+ "params": {
+  "format": "json",
+  "query.term": "example compound",
+  "pageSize": "3",
+  "countTotal": "true"
+ },
+ "status_code": 200,
+ "media_type": "application/json",
+ "fetched_at": "2026-09-24T00:00:00+00:00",
+ "content": {
+  "_fixture_note": "HAND-CONSTRUCTED FIXTURE — shape follows the documented ClinicalTrials.gov API v2 schema; field VALUES are illustrative and are NOT real trial data.",
+  "studies": [
+   {
+    "protocolSection": {
+     "identificationModule": {
+      "nctId": "NCT09999902",
+      "briefTitle": "Illustrative Phase 1/2 Dose-Escalation Study of Example Biologic",
+      "officialTitle": "An Open-Label Phase 1/2 Dose-Escalation and Expansion Study of Example Biologic in Participants With Advanced Solid Tumours"
+     },
+     "statusModule": {
+      "overallStatus": "RECRUITING",
+      "startDateStruct": {
+       "date": "2019-09-03",
+       "type": "ACTUAL"
+      },
+      "primaryCompletionDateStruct": {
+       "date": "2026-12-31",
+       "type": "ESTIMATED"
+      },
+      "completionDateStruct": {
+       "date": "2027-06-30",
+       "type": "ESTIMATED"
+      },
+      "studyFirstSubmitDate": "2019-08-14",
+      "studyFirstPostDateStruct": {
+       "date": "2019-08-20",
+       "type": "ACTUAL"
+      },
+      "lastUpdateSubmitDate": "2024-01-08",
+      "lastUpdatePostDateStruct": {
+       "date": "2024-01-10",
+       "type": "ACTUAL"
+      }
+     },
+     "sponsorCollaboratorsModule": {
+      "leadSponsor": {
+       "name": "Example University Hospital",
+       "class": "OTHER"
+      }
+     },
+     "conditionsModule": {
+      "conditions": [
+       "Advanced Solid Tumour"
+      ]
+     },
+     "designModule": {
+      "studyType": "INTERVENTIONAL",
+      "phases": [
+       "PHASE1",
+       "PHASE2"
+      ],
+      "designInfo": {
+       "allocation": "NON_RANDOMIZED",
+       "interventionModel": "SEQUENTIAL",
+       "maskingInfo": {
+        "masking": "NONE"
+       }
+      },
+      "enrollmentInfo": {
+       "count": 120,
+       "type": "ESTIMATED"
+      }
+     },
+     "armsInterventionsModule": {
+      "interventions": [
+       {
+        "type": "BIOLOGICAL",
+        "name": "Example Biologic"
+       }
+      ]
+     },
+     "outcomesModule": {
+      "primaryOutcomes": [
+       {
+        "measure": "Incidence of dose-limiting toxicities",
+        "timeFrame": "First 28 days"
+       }
+      ]
+     }
+    },
+    "hasResults": false
+   },
+   {
+    "protocolSection": {
+     "identificationModule": {
+      "nctId": "NCT09999903",
+      "briefTitle": "Illustrative Observational Registry of Example Carcinoma"
+     },
+     "statusModule": {
+      "overallStatus": "COMPLETED",
+      "startDateStruct": {
+       "date": "2015-04"
+      },
+      "completionDateStruct": {
+       "date": "2019-12"
+      },
+      "studyFirstSubmitDate": "2015-02-19",
+      "studyFirstPostDateStruct": {
+       "date": "2015-03",
+       "type": "ESTIMATED"
+      },
+      "lastUpdateSubmitDate": "2020-05-30",
+      "lastUpdatePostDateStruct": {
+       "date": "2020-06-02",
+       "type": "ACTUAL"
+      }
+     },
+     "sponsorCollaboratorsModule": {
+      "leadSponsor": {
+       "name": "Example Research Network",
+       "class": "NETWORK"
+      }
+     },
+     "conditionsModule": {
+      "conditions": [
+       "Example Carcinoma"
+      ]
+     },
+     "designModule": {
+      "studyType": "OBSERVATIONAL",
+      "phases": [
+       "NA"
+      ],
+      "enrollmentInfo": {
+       "count": 430,
+       "type": "ACTUAL"
+      }
+     },
+     "outcomesModule": {
+      "primaryOutcomes": [
+       {
+        "measure": "Overall survival",
+        "timeFrame": "5 years"
+       }
+      ]
+     }
+    },
+    "hasResults": false
+   },
+   {
+    "protocolSection": {
+     "identificationModule": {
+      "nctId": "NCT09999904",
+      "briefTitle": "Illustrative Withdrawn Study of Example Compound"
+     },
+     "statusModule": {
+      "overallStatus": "WITHDRAWN",
+      "whyStopped": "Sponsor reprioritised the portfolio before any participant was enrolled.",
+      "studyFirstSubmitDate": "2017-01-05",
+      "studyFirstPostDateStruct": {
+       "date": "2017-01-09",
+       "type": "ESTIMATED"
+      }
+     },
+     "sponsorCollaboratorsModule": {
+      "leadSponsor": {
+       "name": "Example Therapeutics, Inc.",
+       "class": "INDUSTRY"
+      }
+     },
+     "conditionsModule": {
+      "conditions": [
+       "Example Carcinoma"
+      ]
+     },
+     "designModule": {
+      "studyType": "INTERVENTIONAL",
+      "phases": [
+       "PHASE3"
+      ],
+      "enrollmentInfo": {
+       "count": 0,
+       "type": "ACTUAL"
+      }
+     }
+    },
+    "hasResults": false
+   }
+  ],
+  "totalCount": 3,
+  "nextPageToken": "NF0g5JGPlPo"
+ }
+}

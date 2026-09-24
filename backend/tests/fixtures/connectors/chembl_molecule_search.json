@@ -1,0 +1,84 @@
+{
+ "_fixture_note": "RECORDED LIVE FROM https://www.ebi.ac.uk/chembl/api/data/molecule/search.json?q=sotorasib&limit=1 ON 2026-09-24",
+ "endpoint": "https://www.ebi.ac.uk/chembl/api/data/molecule/search.json",
+ "params": {
+  "q": "sotorasib",
+  "limit": "1"
+ },
+ "status_code": 200,
+ "media_type": "application/json",
+ "fetched_at": "2026-09-24T04:43:07.754675+00:00",
+ "content": {
+  "molecules": [
+   {
+    "atc_classifications": [],
+    "availability_type": -1,
+    "biotherapeutic": null,
+    "black_box_warning": 0,
+    "chemical_probe": 0,
+    "chirality": -1,
+    "cross_references": [],
+    "dosed_ingredient": false,
+    "first_approval": null,
+    "first_in_class": -1,
+    "helm_notation": null,
+    "inorganic_flag": -1,
+    "max_phase": null,
+    "molecule_chembl_id": "CHEMBL5174767",
+    "molecule_hierarchy": {
+     "active_chembl_id": "CHEMBL5174767",
+     "molecule_chembl_id": "CHEMBL5174767",
+     "parent_chembl_id": "CHEMBL5174767"
+    },
+    "molecule_properties": {
+     "alogp": "5.09",
+     "aromatic_rings": 4,
+     "full_molformula": "C31H31F2N5O3",
+     "full_mwt": "559.62",
+     "hba": 7,
+     "hbd": 1,
+     "heavy_atoms": 41,
+     "mw_freebase": "559.62",
+     "np_likeness_score": "-0.55",
+     "num_ro5_violations": 2,
+     "psa": "91.56",
+     "qed_weighted": "0.34",
+     "ro3_pass": "N",
+     "rtb": 5
+    },
+    "molecule_structures": {
+     "canonical_smiles": "C=CC(=O)N1CCN(c2nc(=O)n(-c3c(C)ccnc3C(C)C)c3cc(-c4c(O)cccc4F)c(F)cc23)[C@@H](C)C1",
+     "molfile": " \n     RDKit          2D\n\n 41 45  0  0  0  0  0  0  0  0999 V2000\n   -2.1368    1.5085    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.4222    1.9208    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.7103    1.5089    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.7103    0.6837    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.4204    0.2719    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -2.1368    0.6800    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    0.0012    0.2747    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    0.0028   -0.5461    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.7072   -0.9579    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.4188   -0.5489    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n    0.7123    0.6852    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n    0.7123    1.5062    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.4234    1.9168    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    2.1345    1.5062    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n    2.1345    0.6851    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.4234    0.2747    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    2.8455    1.9168    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    2.8455    2.7378    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n    3.5566    1.5062    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.2677    1.9168    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.4234   -0.5464    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.7072   -1.7790    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.4222    2.7419    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0\n   -2.8479    1.9190    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -3.5591    1.5087    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -4.2677    1.9187    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -4.2677    2.7400    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -3.5609    3.1498    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -2.8479    2.7436    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -3.5591    0.6876    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n   -2.1368    3.1542    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0\n   -2.1299   -0.9593    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -2.1301   -1.7805    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -2.8395   -2.1892    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n   -3.5507   -1.7785    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -3.5523   -0.9615    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -2.8440   -0.5470    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -2.8440    0.2739    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.5496   -2.3611    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.7565   -2.1486    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.7620   -3.1542    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  2  1  2  0\n  3  2  1  0\n  4  3  2  0\n  5  4  1  0\n  1  6  1  0\n  6  5  2  0\n  4  7  1  0\n  8  7  2  0\n  9  8  1  0\n 10  9  1  0\n  5 10  1  0\n 11  7  1  0\n 11 12  1  0\n 13 12  1  0\n 14 13  1  0\n 15 14  1  0\n 11 16  1  0\n 16 15  1  0\n 14 17  1  0\n 17 18  2  0\n 17 19  1  0\n 19 20  2  0\n 16 21  1  6\n  9 22  2  0\n  2 23  1  0\n 24  1  1  0\n 25 24  2  0\n 26 25  1  0\n 27 26  2  0\n 28 27  1  0\n 24 29  1  0\n 29 28  2  0\n 25 30  1  0\n 29 31  1  0\n 32 10  1  0\n 33 32  2  0\n 34 33  1  0\n 35 34  2  0\n 36 35  1  0\n 32 37  1  0\n 37 36  2  0\n 37 38  1  0\n 33 39  1  0\n 39 40  1  0\n 39 41  1  0\nM  END\n> <chembl_id>\nCHEMBL5174767\n\n> <chembl_pref_name>\nNone",
+     "standard_inchi": "InChI=1S/C31H31F2N5O3/c1-6-26(40)36-12-13-37(19(5)16-36)30-21-14-23(33)20(27-22(32)8-7-9-25(27)39)15-24(21)38(31(41)35-30)29-18(4)10-11-34-28(29)17(2)3/h6-11,14-15,17,19,39H,1,12-13,16H2,2-5H3/t19-/m0/s1",
+     "standard_inchi_key": "WKPFDOZYDAYWJH-IBGZPJMESA-N"
+    },
+    "molecule_synonyms": [],
+    "molecule_type": null,
+    "natural_product": 0,
+    "oral": false,
+    "orphan": -1,
+    "parenteral": false,
+    "polymer_flag": 0,
+    "pref_name": null,
+    "prodrug": -1,
+    "score": 33.0,
+    "structure_type": "MOL",
+    "therapeutic_flag": false,
+    "topical": false,
+    "usan_stem": null,
+    "usan_stem_definition": null,
+    "usan_substem": null,
+    "usan_year": null,
+    "veterinary": -1,
+    "withdrawn_flag": false
+   }
+  ],
+  "page_meta": {
+   "limit": 1,
+   "next": "/chembl/api/data/molecule/search.json?limit=1&offset=1&q=sotorasib",
+   "offset": 0,
+   "previous": null,
+   "total_count": 3
+  }
+ }
+}

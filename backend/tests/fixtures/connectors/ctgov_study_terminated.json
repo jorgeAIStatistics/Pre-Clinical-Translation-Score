@@ -1,0 +1,113 @@
+{
+ "_fixture_note": "HAND-CONSTRUCTED FIXTURE — shape follows the documented ClinicalTrials.gov API v2 schema; field VALUES are illustrative and are NOT real trial data.",
+ "endpoint": "https://clinicaltrials.gov/api/v2/studies/NCT09999901",
+ "params": {
+  "format": "json"
+ },
+ "status_code": 200,
+ "media_type": "application/json",
+ "fetched_at": "2026-09-24T00:00:00+00:00",
+ "content": {
+  "_fixture_note": "HAND-CONSTRUCTED FIXTURE — shape follows the documented ClinicalTrials.gov API v2 schema; field VALUES are illustrative and are NOT real trial data.",
+  "protocolSection": {
+   "identificationModule": {
+    "nctId": "NCT09999901",
+    "orgStudyIdInfo": {
+     "id": "EXAMPLE-2013-002"
+    },
+    "briefTitle": "Illustrative Phase 2 Study of Example Compound in Example Carcinoma",
+    "officialTitle": "A Randomised, Double-Blind, Placebo-Controlled Phase 2 Study of Example Compound in Participants With Advanced Example Carcinoma"
+   },
+   "statusModule": {
+    "overallStatus": "TERMINATED",
+    "whyStopped": "Pre-specified interim analysis did not meet the futility boundary for progression-free survival.",
+    "startDateStruct": {
+     "date": "2013-06",
+     "type": "ACTUAL"
+    },
+    "primaryCompletionDateStruct": {
+     "date": "2016-11-30",
+     "type": "ACTUAL"
+    },
+    "completionDateStruct": {
+     "date": "2017-02-28",
+     "type": "ACTUAL"
+    },
+    "studyFirstSubmitDate": "2013-03-11",
+    "studyFirstSubmitQcDate": "2013-03-14",
+    "studyFirstPostDateStruct": {
+     "date": "2013-03-15",
+     "type": "ESTIMATED"
+    },
+    "lastUpdateSubmitDate": "2018-04-02",
+    "lastUpdatePostDateStruct": {
+     "date": "2018-04-05",
+     "type": "ACTUAL"
+    }
+   },
+   "sponsorCollaboratorsModule": {
+    "leadSponsor": {
+     "name": "Example Therapeutics, Inc.",
+     "class": "INDUSTRY"
+    }
+   },
+   "conditionsModule": {
+    "conditions": [
+     "Example Carcinoma"
+    ],
+    "keywords": [
+     "illustrative"
+    ]
+   },
+   "designModule": {
+    "studyType": "INTERVENTIONAL",
+    "phases": [
+     "PHASE2"
+    ],
+    "designInfo": {
+     "allocation": "RANDOMIZED",
+     "interventionModel": "PARALLEL",
+     "primaryPurpose": "TREATMENT",
+     "maskingInfo": {
+      "masking": "DOUBLE",
+      "whoMasked": [
+       "PARTICIPANT",
+       "INVESTIGATOR"
+      ]
+     }
+    },
+    "enrollmentInfo": {
+     "count": 84,
+     "type": "ACTUAL"
+    }
+   },
+   "armsInterventionsModule": {
+    "interventions": [
+     {
+      "type": "DRUG",
+      "name": "Example Compound",
+      "description": "Oral, once daily",
+      "otherNames": [
+       "EXM-101"
+      ]
+     },
+     {
+      "type": "DRUG",
+      "name": "Placebo",
+      "description": "Matched oral placebo"
+     }
+    ]
+   },
+   "outcomesModule": {
+    "primaryOutcomes": [
+     {
+      "measure": "Progression-free survival",
+      "description": "Time from randomisation to documented progression or death",
+      "timeFrame": "Up to 24 months"
+     }
+    ]
+   }
+  },
+  "hasResults": true
+ }
+}

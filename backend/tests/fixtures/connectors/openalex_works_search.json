@@ -1,0 +1,1101 @@
+{
+ "_fixture_note": "RECORDED LIVE FROM https://api.openalex.org/works?select=id%2Cdoi%2Cids%2Ctitle%2Cdisplay_name%2Cpublication_date%2Cpublication_year%2Ctype%2Ccited_by_count%2Cis_retracted%2Cis_paratext%2Copen_access%2Cconcepts%2Creferenced_works_count%2Cauthorships%2Cprimary_location%2Clanguage%2Cabstract_inverted_index&search=KRAS+G12C+inhibitor&filter=authors_count%3A%3C6&per-page=2&page=1 ON 2026-09-24",
+ "endpoint": "https://api.openalex.org/works",
+ "params": {
+  "select": "id,doi,ids,title,display_name,publication_date,publication_year,type,cited_by_count,is_retracted,is_paratext,open_access,concepts,referenced_works_count,authorships,primary_location,language,abstract_inverted_index",
+  "search": "KRAS G12C inhibitor",
+  "filter": "authors_count:<6",
+  "per-page": "2",
+  "page": "1"
+ },
+ "status_code": 200,
+ "media_type": "application/json",
+ "fetched_at": "2026-09-24T04:45:46.828244+00:00",
+ "content": {
+  "meta": {
+   "count": 5017,
+   "db_response_time_ms": 516,
+   "page": 1,
+   "per_page": 2,
+   "groups_count": null,
+   "x_query": {
+    "oql": "works where authors count < (6) and full text has (KRAS G12C inhibitor)",
+    "oqo": {
+     "get_rows": "works",
+     "filter_rows": [
+      {
+       "column_id": "authors_count",
+       "value": 6,
+       "operator": "<"
+      },
+      {
+       "column_id": "fulltext.search",
+       "value": "KRAS G12C inhibitor",
+       "operator": "has"
+      }
+     ]
+    },
+    "url": "/works?filter=authors_count:%3C6,fulltext.search:KRAS G12C inhibitor&per_page=2&page=1"
+   },
+   "cost_usd": 0.001
+  },
+  "results": [
+   {
+    "id": "https://openalex.org/W3196637241",
+    "doi": "https://doi.org/10.1038/s41417-021-00383-9",
+    "ids": {
+     "openalex": "https://openalex.org/W3196637241",
+     "doi": "https://doi.org/10.1038/s41417-021-00383-9",
+     "mag": "3196637241",
+     "pmid": "https://pubmed.ncbi.nlm.nih.gov/34471232"
+    },
+    "title": "The KRAS-G12C inhibitor: activity and resistance",
+    "display_name": "The KRAS-G12C inhibitor: activity and resistance",
+    "publication_date": "2021-09-01",
+    "publication_year": 2021,
+    "type": "article",
+    "cited_by_count": 229,
+    "is_retracted": false,
+    "is_paratext": false,
+    "open_access": {
+     "is_oa": true,
+     "oa_status": "bronze",
+     "oa_url": "https://www.nature.com/articles/s41417-021-00383-9.pdf",
+     "any_repository_has_fulltext": false
+    },
+    "concepts": [
+     {
+      "id": "https://openalex.org/C2781187634",
+      "wikidata": "https://www.wikidata.org/wiki/Q20969980",
+      "display_name": "KRAS",
+      "level": 4,
+      "score": 0.8018035292625427
+     },
+     {
+      "id": "https://openalex.org/C57473165",
+      "wikidata": "https://www.wikidata.org/wiki/Q7315604",
+      "display_name": "Resistance (ecology)",
+      "level": 2,
+      "score": 0.45662200450897217
+     },
+     {
+      "id": "https://openalex.org/C185592680",
+      "wikidata": "https://www.wikidata.org/wiki/Q2329",
+      "display_name": "Chemistry",
+      "level": 0,
+      "score": 0.3793123960494995
+     },
+     {
+      "id": "https://openalex.org/C86803240",
+      "wikidata": "https://www.wikidata.org/wiki/Q420",
+      "display_name": "Biology",
+      "level": 0,
+      "score": 0.32828375697135925
+     },
+     {
+      "id": "https://openalex.org/C89423630",
+      "wikidata": "https://www.wikidata.org/wiki/Q7193",
+      "display_name": "Microbiology",
+      "level": 1,
+      "score": 0.3216972053050995
+     },
+     {
+      "id": "https://openalex.org/C54355233",
+      "wikidata": "https://www.wikidata.org/wiki/Q7162",
+      "display_name": "Genetics",
+      "level": 1,
+      "score": 0.26816606521606445
+     },
+     {
+      "id": "https://openalex.org/C501734568",
+      "wikidata": "https://www.wikidata.org/wiki/Q42918",
+      "display_name": "Mutation",
+      "level": 3,
+      "score": 0.215280681848526
+     },
+     {
+      "id": "https://openalex.org/C104317684",
+      "wikidata": "https://www.wikidata.org/wiki/Q7187",
+      "display_name": "Gene",
+      "level": 2,
+      "score": 0.11398375034332275
+     },
+     {
+      "id": "https://openalex.org/C18903297",
+      "wikidata": "https://www.wikidata.org/wiki/Q7150",
+      "display_name": "Ecology",
+      "level": 1,
+      "score": 0.0
+     }
+    ],
+    "referenced_works_count": 54,
+    "authorships": [
+     {
+      "author_position": "first",
+      "author": {
+       "id": "https://openalex.org/A5100349709",
+       "display_name": "Jiao Liu",
+       "orcid": "https://orcid.org/0000-0002-4900-3750"
+      },
+      "institutions": [
+       {
+        "id": "https://openalex.org/I4210092091",
+        "display_name": "Third Affiliated Hospital of Guangzhou Medical University",
+        "ror": "https://ror.org/00fb35g87",
+        "country_code": "CN",
+        "type": "healthcare",
+        "lineage": [
+         "https://openalex.org/I4210092091"
+        ]
+       },
+       {
+        "id": "https://openalex.org/I92039509",
+        "display_name": "Guangzhou Medical University",
+        "ror": "https://ror.org/00zat6v61",
+        "country_code": "CN",
+        "type": "education",
+        "lineage": [
+         "https://openalex.org/I92039509"
+        ]
+       }
+      ],
+      "countries": [
+       "CN"
+      ],
+      "is_corresponding": false,
+      "raw_author_name": "Jiao Liu",
+      "raw_affiliation_strings": [
+       "The Third Affiliated Hospital of Guangzhou Medical University, Guangzhou, Guangdong, China"
+      ],
+      "raw_orcid": null,
+      "affiliations": [
+       {
+        "raw_affiliation_string": "The Third Affiliated Hospital of Guangzhou Medical University, Guangzhou, Guangdong, China",
+        "institution_ids": [
+         "https://openalex.org/I4210092091",
+         "https://openalex.org/I92039509"
+        ]
+       }
+      ]
+     },
+     {
+      "author_position": "middle",
+      "author": {
+       "id": "https://openalex.org/A5091664811",
+       "display_name": "Rui Kang",
+       "orcid": "https://orcid.org/0000-0003-2725-1574"
+      },
+      "institutions": [
+       {
+        "id": "https://openalex.org/I4210096815",
+        "display_name": "Southwestern Medical Center",
+        "ror": "https://ror.org/00t9vx427",
+        "country_code": "US",
+        "type": "healthcare",
+        "lineage": [
+         "https://openalex.org/I4210096815"
+        ]
+       },
+       {
+        "id": "https://openalex.org/I4388891891",
+        "display_name": "Southwestern Medical Center",
+        "ror": "https://ror.org/05d80e146",
+        "country_code": "US",
+        "type": "healthcare",
+        "lineage": [
+         "https://openalex.org/I4388891891"
+        ]
+       },
+       {
+        "id": "https://openalex.org/I867280407",
+        "display_name": "The University of Texas Southwestern Medical Center",
+        "ror": "https://ror.org/05byvp690",
+        "country_code": "US",
+        "type": "healthcare",
+        "lineage": [
+         "https://openalex.org/I867280407"
+        ]
+       }
+      ],
+      "countries": [
+       "US"
+      ],
+      "is_corresponding": false,
+      "raw_author_name": "Rui Kang",
+      "raw_affiliation_strings": [
+       "Department of Surgery, UT Southwestern Medical Center, Dallas, TX, USA"
+      ],
+      "raw_orcid": null,
+      "affiliations": [
+       {
+        "raw_affiliation_string": "Department of Surgery, UT Southwestern Medical Center, Dallas, TX, USA",
+        "institution_ids": [
+         "https://openalex.org/I4210096815",
+         "https://openalex.org/I4388891891",
+         "https://openalex.org/I867280407"
+        ]
+       }
+      ]
+     },
+     {
+      "author_position": "last",
+      "author": {
+       "id": "https://openalex.org/A5055468442",
+       "display_name": "Daolin Tang",
+       "orcid": "https://orcid.org/0000-0002-1903-6180"
+      },
+      "institutions": [
+       {
+        "id": "https://openalex.org/I4210092091",
+        "display_name": "Third Affiliated Hospital of Guangzhou Medical University",
+        "ror": "https://ror.org/00fb35g87",
+        "country_code": "CN",
+        "type": "healthcare",
+        "lineage": [
+         "https://openalex.org/I4210092091"
+        ]
+       },
+       {
+        "id": "https://openalex.org/I4210096815",
+        "display_name": "Southwestern Medical Center",
+        "ror": "https://ror.org/00t9vx427",
+        "country_code": "US",
+        "type": "healthcare",
+        "lineage": [
+         "https://openalex.org/I4210096815"
+        ]
+       },
+       {
+        "id": "https://openalex.org/I4388891891",
+        "display_name": "Southwestern Medical Center",
+        "ror": "https://ror.org/05d80e146",
+        "country_code": "US",
+        "type": "healthcare",
+        "lineage": [
+         "https://openalex.org/I4388891891"
+        ]
+       },
+       {
+        "id": "https://openalex.org/I867280407",
+        "display_name": "The University of Texas Southwestern Medical Center",
+        "ror": "https://ror.org/05byvp690",
+        "country_code": "US",
+        "type": "healthcare",
+        "lineage": [
+         "https://openalex.org/I867280407"
+        ]
+       },
+       {
+        "id": "https://openalex.org/I92039509",
+        "display_name": "Guangzhou Medical University",
+        "ror": "https://ror.org/00zat6v61",
+        "country_code": "CN",
+        "type": "education",
+        "lineage": [
+         "https://openalex.org/I92039509"
+        ]
+       }
+      ],
+      "countries": [
+       "CN",
+       "US"
+      ],
+      "is_corresponding": true,
+      "raw_author_name": "Daolin Tang",
+      "raw_affiliation_strings": [
+       "Department of Surgery, UT Southwestern Medical Center, Dallas, TX, USA. daolin.tang@utsouthwestern.edu",
+       "The Third Affiliated Hospital of Guangzhou Medical University, Guangzhou, Guangdong, China. daolin.tang@utsouthwestern.edu",
+       "Department of Surgery, UT Southwestern Medical Center, Dallas, TX, USA"
+      ],
+      "raw_orcid": "https://orcid.org/0000-0002-1903-6180",
+      "affiliations": [
+       {
+        "raw_affiliation_string": "Department of Surgery, UT Southwestern Medical Center, Dallas, TX, USA. daolin.tang@utsouthwestern.edu",
+        "institution_ids": [
+         "https://openalex.org/I4210096815",
+         "https://openalex.org/I867280407"
+        ]
+       },
+       {
+        "raw_affiliation_string": "The Third Affiliated Hospital of Guangzhou Medical University, Guangzhou, Guangdong, China. daolin.tang@utsouthwestern.edu",
+        "institution_ids": [
+         "https://openalex.org/I4210092091",
+         "https://openalex.org/I92039509"
+        ]
+       },
+       {
+        "raw_affiliation_string": "Department of Surgery, UT Southwestern Medical Center, Dallas, TX, USA",
+        "institution_ids": [
+         "https://openalex.org/I4210096815",
+         "https://openalex.org/I4388891891",
+         "https://openalex.org/I867280407"
+        ]
+       }
+      ]
+     }
+    ],
+    "primary_location": {
+     "id": "doi:10.1038/s41417-021-00383-9",
+     "is_oa": true,
+     "landing_page_url": "https://doi.org/10.1038/s41417-021-00383-9",
+     "pdf_url": "https://www.nature.com/articles/s41417-021-00383-9.pdf",
+     "source": {
+      "id": "https://openalex.org/S157451995",
+      "display_name": "Cancer Gene Therapy",
+      "issn_l": "0929-1903",
+      "issn": [
+       "0929-1903",
+       "1476-5500"
+      ],
+      "is_oa": false,
+      "is_in_doaj": false,
+      "is_core": true,
+      "listed_in": [
+       "cwts-core",
+       "doyens",
+       "jufo-1",
+       "medline"
+      ],
+      "host_organization": "https://openalex.org/P4310319965",
+      "host_organization_name": "Springer Nature",
+      "host_organization_lineage": [
+       "https://openalex.org/P4310319965"
+      ],
+      "host_organization_lineage_names": [
+       "Springer Nature"
+      ],
+      "type": "journal"
+     },
+     "license": null,
+     "license_id": null,
+     "version": "publishedVersion",
+     "is_accepted": true,
+     "is_published": true,
+     "raw_source_name": "Cancer Gene Therapy",
+     "raw_type": "journal-article"
+    },
+    "language": "en",
+    "abstract_inverted_index": null
+   },
+   {
+    "id": "https://openalex.org/W2233032895",
+    "doi": "https://doi.org/10.1126/science.aad6204",
+    "ids": {
+     "openalex": "https://openalex.org/W2233032895",
+     "doi": "https://doi.org/10.1126/science.aad6204",
+     "mag": "2233032895",
+     "pmid": "https://pubmed.ncbi.nlm.nih.gov/26841430"
+    },
+    "title": "Allele-specific inhibitors inactivate mutant KRAS G12C by a trapping mechanism",
+    "display_name": "Allele-specific inhibitors inactivate mutant KRAS G12C by a trapping mechanism",
+    "publication_date": "2016-01-15",
+    "publication_year": 2016,
+    "type": "article",
+    "cited_by_count": 702,
+    "is_retracted": false,
+    "is_paratext": false,
+    "open_access": {
+     "is_oa": true,
+     "oa_status": "green",
+     "oa_url": "https://www.ncbi.nlm.nih.gov/pmc/articles/4955282",
+     "any_repository_has_fulltext": true
+    },
+    "concepts": [
+     {
+      "id": "https://openalex.org/C2781187634",
+      "wikidata": "https://www.wikidata.org/wiki/Q20969980",
+      "display_name": "KRAS",
+      "level": 4,
+      "score": 0.8582592010498047
+     },
+     {
+      "id": "https://openalex.org/C207332259",
+      "wikidata": "https://www.wikidata.org/wiki/Q769143",
+      "display_name": "GTPase",
+      "level": 2,
+      "score": 0.7484907507896423
+     },
+     {
+      "id": "https://openalex.org/C2777995097",
+      "wikidata": "https://www.wikidata.org/wiki/Q422462",
+      "display_name": "Guanosine",
+      "level": 2,
+      "score": 0.7064171433448792
+     },
+     {
+      "id": "https://openalex.org/C512185932",
+      "wikidata": "https://www.wikidata.org/wiki/Q28745",
+      "display_name": "Nucleotide",
+      "level": 3,
+      "score": 0.6470597982406616
+     },
+     {
+      "id": "https://openalex.org/C126619667",
+      "wikidata": "https://www.wikidata.org/wiki/Q901088",
+      "display_name": "Guanine nucleotide exchange factor",
+      "level": 3,
+      "score": 0.6423572897911072
+     },
+     {
+      "id": "https://openalex.org/C143065580",
+      "wikidata": "https://www.wikidata.org/wiki/Q3285695",
+      "display_name": "Mutant",
+      "level": 3,
+      "score": 0.5916152000427246
+     },
+     {
+      "id": "https://openalex.org/C185592680",
+      "wikidata": "https://www.wikidata.org/wiki/Q2329",
+      "display_name": "Chemistry",
+      "level": 0,
+      "score": 0.5371755957603455
+     },
+     {
+      "id": "https://openalex.org/C501734568",
+      "wikidata": "https://www.wikidata.org/wiki/Q42918",
+      "display_name": "Mutation",
+      "level": 3,
+      "score": 0.49538910388946533
+     },
+     {
+      "id": "https://openalex.org/C502942594",
+      "wikidata": "https://www.wikidata.org/wiki/Q3421914",
+      "display_name": "Cancer research",
+      "level": 1,
+      "score": 0.47415488958358765
+     },
+     {
+      "id": "https://openalex.org/C2780298669",
+      "wikidata": "https://www.wikidata.org/wiki/Q415071",
+      "display_name": "Small GTPase",
+      "level": 3,
+      "score": 0.46421173214912415
+     },
+     {
+      "id": "https://openalex.org/C95444343",
+      "wikidata": "https://www.wikidata.org/wiki/Q7141",
+      "display_name": "Cell biology",
+      "level": 1,
+      "score": 0.4510200023651123
+     },
+     {
+      "id": "https://openalex.org/C55493867",
+      "wikidata": "https://www.wikidata.org/wiki/Q7094",
+      "display_name": "Biochemistry",
+      "level": 1,
+      "score": 0.4212460517883301
+     },
+     {
+      "id": "https://openalex.org/C42362537",
+      "wikidata": "https://www.wikidata.org/wiki/Q87099740",
+      "display_name": "Tyrosine kinase",
+      "level": 3,
+      "score": 0.42020130157470703
+     },
+     {
+      "id": "https://openalex.org/C89611455",
+      "wikidata": "https://www.wikidata.org/wiki/Q6804646",
+      "display_name": "Mechanism (biology)",
+      "level": 2,
+      "score": 0.4114015996456146
+     },
+     {
+      "id": "https://openalex.org/C86803240",
+      "wikidata": "https://www.wikidata.org/wiki/Q420",
+      "display_name": "Biology",
+      "level": 0,
+      "score": 0.34164857864379883
+     },
+     {
+      "id": "https://openalex.org/C62478195",
+      "wikidata": "https://www.wikidata.org/wiki/Q828130",
+      "display_name": "Signal transduction",
+      "level": 2,
+      "score": 0.23802971839904785
+     },
+     {
+      "id": "https://openalex.org/C104317684",
+      "wikidata": "https://www.wikidata.org/wiki/Q7187",
+      "display_name": "Gene",
+      "level": 2,
+      "score": 0.13736149668693542
+     },
+     {
+      "id": "https://openalex.org/C111472728",
+      "wikidata": "https://www.wikidata.org/wiki/Q9471",
+      "display_name": "Epistemology",
+      "level": 1,
+      "score": 0.0
+     },
+     {
+      "id": "https://openalex.org/C138885662",
+      "wikidata": "https://www.wikidata.org/wiki/Q5891",
+      "display_name": "Philosophy",
+      "level": 0,
+      "score": 0.0
+     }
+    ],
+    "referenced_works_count": 39,
+    "authorships": [
+     {
+      "author_position": "first",
+      "author": {
+       "id": "https://openalex.org/A5055707551",
+       "display_name": "Piro Lito",
+       "orcid": "https://orcid.org/0000-0003-2196-3503"
+      },
+      "institutions": [
+       {
+        "id": "https://openalex.org/I1334819555",
+        "display_name": "Memorial Sloan Kettering Cancer Center",
+        "ror": "https://ror.org/02yrq0923",
+        "country_code": "US",
+        "type": "healthcare",
+        "lineage": [
+         "https://openalex.org/I1334819555"
+        ]
+       }
+      ],
+      "countries": [
+       "US"
+      ],
+      "is_corresponding": true,
+      "raw_author_name": "Piro Lito",
+      "raw_affiliation_strings": [
+       "Department of Medicine, Memorial Sloan Kettering Cancer Center, New York, NY, USA"
+      ],
+      "raw_orcid": null,
+      "affiliations": [
+       {
+        "raw_affiliation_string": "Department of Medicine, Memorial Sloan Kettering Cancer Center, New York, NY, USA",
+        "institution_ids": [
+         "https://openalex.org/I1334819555"
+        ]
+       }
+      ]
+     },
+     {
+      "author_position": "middle",
+      "author": {
+       "id": "https://openalex.org/A5108659478",
+       "display_name": "Martha Solomon",
+       "orcid": null
+      },
+      "institutions": [
+       {
+        "id": "https://openalex.org/I1334819555",
+        "display_name": "Memorial Sloan Kettering Cancer Center",
+        "ror": "https://ror.org/02yrq0923",
+        "country_code": "US",
+        "type": "healthcare",
+        "lineage": [
+         "https://openalex.org/I1334819555"
+        ]
+       }
+      ],
+      "countries": [
+       "US"
+      ],
+      "is_corresponding": false,
+      "raw_author_name": "Martha Solomon",
+      "raw_affiliation_strings": [
+       "Molecular Pharmacology Program, Memorial Sloan Kettering Cancer Center, New York, NY, USA"
+      ],
+      "raw_orcid": null,
+      "affiliations": [
+       {
+        "raw_affiliation_string": "Molecular Pharmacology Program, Memorial Sloan Kettering Cancer Center, New York, NY, USA",
+        "institution_ids": [
+         "https://openalex.org/I1334819555"
+        ]
+       }
+      ]
+     },
+     {
+      "author_position": "middle",
+      "author": {
+       "id": "https://openalex.org/A5101826192",
+       "display_name": "Lian‐Sheng Li",
+       "orcid": "https://orcid.org/0000-0002-8187-2876"
+      },
+      "institutions": [
+       {
+        "id": "https://openalex.org/I4210154990",
+        "display_name": "Wellspring Biosciences (United States)",
+        "ror": "https://ror.org/05qzegn43",
+        "country_code": "US",
+        "type": "company",
+        "lineage": [
+         "https://openalex.org/I4210154990"
+        ]
+       }
+      ],
+      "countries": [
+       "US"
+      ],
+      "is_corresponding": false,
+      "raw_author_name": "Lian-Sheng Li",
+      "raw_affiliation_strings": [
+       "Wellspring Biosciences, La Jolla, CA, USA"
+      ],
+      "raw_orcid": null,
+      "affiliations": [
+       {
+        "raw_affiliation_string": "Wellspring Biosciences, La Jolla, CA, USA",
+        "institution_ids": [
+         "https://openalex.org/I4210154990"
+        ]
+       }
+      ]
+     },
+     {
+      "author_position": "middle",
+      "author": {
+       "id": "https://openalex.org/A5047062529",
+       "display_name": "Rasmus Hansen",
+       "orcid": "https://orcid.org/0000-0001-8515-8779"
+      },
+      "institutions": [
+       {
+        "id": "https://openalex.org/I4210154990",
+        "display_name": "Wellspring Biosciences (United States)",
+        "ror": "https://ror.org/05qzegn43",
+        "country_code": "US",
+        "type": "company",
+        "lineage": [
+         "https://openalex.org/I4210154990"
+        ]
+       }
+      ],
+      "countries": [
+       "US"
+      ],
+      "is_corresponding": false,
+      "raw_author_name": "Rasmus Hansen",
+      "raw_affiliation_strings": [
+       "Wellspring Biosciences, La Jolla, CA, USA"
+      ],
+      "raw_orcid": null,
+      "affiliations": [
+       {
+        "raw_affiliation_string": "Wellspring Biosciences, La Jolla, CA, USA",
+        "institution_ids": [
+         "https://openalex.org/I4210154990"
+        ]
+       }
+      ]
+     },
+     {
+      "author_position": "last",
+      "author": {
+       "id": "https://openalex.org/A5060228803",
+       "display_name": "Neal X. Rosen",
+       "orcid": "https://orcid.org/0000-0002-8307-654X"
+      },
+      "institutions": [
+       {
+        "id": "https://openalex.org/I1334819555",
+        "display_name": "Memorial Sloan Kettering Cancer Center",
+        "ror": "https://ror.org/02yrq0923",
+        "country_code": "US",
+        "type": "healthcare",
+        "lineage": [
+         "https://openalex.org/I1334819555"
+        ]
+       }
+      ],
+      "countries": [
+       "US"
+      ],
+      "is_corresponding": true,
+      "raw_author_name": "Neal Rosen",
+      "raw_affiliation_strings": [
+       "Department of Medicine, Memorial Sloan Kettering Cancer Center, New York, NY, USA",
+       "Molecular Pharmacology Program, Memorial Sloan Kettering Cancer Center, New York, NY, USA"
+      ],
+      "raw_orcid": null,
+      "affiliations": [
+       {
+        "raw_affiliation_string": "Department of Medicine, Memorial Sloan Kettering Cancer Center, New York, NY, USA",
+        "institution_ids": [
+         "https://openalex.org/I1334819555"
+        ]
+       },
+       {
+        "raw_affiliation_string": "Molecular Pharmacology Program, Memorial Sloan Kettering Cancer Center, New York, NY, USA",
+        "institution_ids": [
+         "https://openalex.org/I1334819555"
+        ]
+       }
+      ]
+     }
+    ],
+    "primary_location": {
+     "id": "doi:10.1126/science.aad6204",
+     "is_oa": false,
+     "landing_page_url": "https://doi.org/10.1126/science.aad6204",
+     "pdf_url": null,
+     "source": {
+      "id": "https://openalex.org/S3880285",
+      "display_name": "Science",
+      "issn_l": "0036-8075",
+      "issn": [
+       "0036-8075",
+       "0193-4511",
+       "1095-9203"
+      ],
+      "is_oa": false,
+      "is_in_doaj": false,
+      "is_core": true,
+      "listed_in": [
+       "cwts-core",
+       "doyens",
+       "erih-plus",
+       "jufo-3",
+       "ki-jl-3",
+       "medline",
+       "norway-2"
+      ],
+      "host_organization": "https://openalex.org/P4310315823",
+      "host_organization_name": "American Association for the Advancement of Science",
+      "host_organization_lineage": [
+       "https://openalex.org/P4310315823"
+      ],
+      "host_organization_lineage_names": [
+       "American Association for the Advancement of Science"
+      ],
+      "type": "journal"
+     },
+     "license": null,
+     "license_id": null,
+     "version": "publishedVersion",
+     "is_accepted": true,
+     "is_published": true,
+     "raw_source_name": "Science",
+     "raw_type": "journal-article"
+    },
+    "language": "en",
+    "abstract_inverted_index": {
+     "It": [
+      0
+     ],
+     "is": [
+      1,
+      15,
+      58
+     ],
+     "thought": [
+      2
+     ],
+     "that": [
+      3,
+      36,
+      109
+     ],
+     "KRAS": [
+      4
+     ],
+     "oncoproteins": [
+      5
+     ],
+     "are": [
+      6,
+      26
+     ],
+     "constitutively": [
+      7
+     ],
+     "active": [
+      8
+     ],
+     "because": [
+      9,
+      55
+     ],
+     "their": [
+      10
+     ],
+     "guanosine": [
+      11,
+      23
+     ],
+     "triphosphatase": [
+      12
+     ],
+     "(GTPase)": [
+      13
+     ],
+     "activity": [
+      14,
+      52,
+      76,
+      90
+     ],
+     "disabled.": [
+      16
+     ],
+     "Consequently,": [
+      17
+     ],
+     "drugs": [
+      18,
+      39
+     ],
+     "targeting": [
+      19
+     ],
+     "the": [
+      20,
+      82,
+      85,
+      103
+     ],
+     "inactive": [
+      21,
+      69
+     ],
+     "or": [
+      22
+     ],
+     "5'-diphosphate-bound": [
+      24
+     ],
+     "conformation": [
+      25
+     ],
+     "not": [
+      27
+     ],
+     "expected": [
+      28
+     ],
+     "to": [
+      29,
+      40,
+      60,
+      125
+     ],
+     "be": [
+      30
+     ],
+     "effective.": [
+      31
+     ],
+     "We": [
+      32
+     ],
+     "describe": [
+      33
+     ],
+     "a": [
+      34,
+      119
+     ],
+     "mechanism": [
+      35
+     ],
+     "enables": [
+      37
+     ],
+     "such": [
+      38
+     ],
+     "inhibit": [
+      41
+     ],
+     "KRAS(G12C)": [
+      42,
+      57,
+      97,
+      110
+     ],
+     "signaling": [
+      43
+     ],
+     "and": [
+      44,
+      53,
+      64,
+      77,
+      117
+     ],
+     "cancer": [
+      45,
+      115
+     ],
+     "cell": [
+      46
+     ],
+     "growth.": [
+      47
+     ],
+     "Inhibition": [
+      48
+     ],
+     "requires": [
+      49
+     ],
+     "intact": [
+      50
+     ],
+     "GTPase": [
+      51,
+      75
+     ],
+     "occurs": [
+      54
+     ],
+     "drug-bound": [
+      56
+     ],
+     "insusceptible": [
+      59
+     ],
+     "nucleotide": [
+      61,
+      88,
+      112
+     ],
+     "exchange": [
+      62,
+      80,
+      89
+     ],
+     "factors": [
+      63
+     ],
+     "thus": [
+      65
+     ],
+     "trapped": [
+      66
+     ],
+     "in": [
+      67,
+      114
+     ],
+     "its": [
+      68,
+      100
+     ],
+     "state.": [
+      70
+     ],
+     "Indeed,": [
+      71
+     ],
+     "mutants": [
+      72
+     ],
+     "completely": [
+      73
+     ],
+     "lacking": [
+      74
+     ],
+     "those": [
+      78
+     ],
+     "promoting": [
+      79
+     ],
+     "reduced": [
+      81
+     ],
+     "potency": [
+      83
+     ],
+     "of": [
+      84,
+      92
+     ],
+     "drug.": [
+      86
+     ],
+     "Suppressing": [
+      87
+     ],
+     "downstream": [
+      91
+     ],
+     "various": [
+      93
+     ],
+     "tyrosine": [
+      94
+     ],
+     "kinases": [
+      95
+     ],
+     "enhanced": [
+      96
+     ],
+     "inhibition,": [
+      98
+     ],
+     "whereas": [
+      99
+     ],
+     "potentiation": [
+      101
+     ],
+     "had": [
+      102
+     ],
+     "opposite": [
+      104
+     ],
+     "effect.": [
+      105
+     ],
+     "These": [
+      106
+     ],
+     "findings": [
+      107
+     ],
+     "reveal": [
+      108
+     ],
+     "undergoes": [
+      111
+     ],
+     "cycling": [
+      113
+     ],
+     "cells": [
+      116
+     ],
+     "provide": [
+      118
+     ],
+     "basis": [
+      120
+     ],
+     "for": [
+      121
+     ],
+     "developing": [
+      122
+     ],
+     "effective": [
+      123
+     ],
+     "therapies": [
+      124
+     ],
+     "treat": [
+      126
+     ],
+     "KRAS(G12C)-driven": [
+      127
+     ],
+     "cancers.": [
+      128
+     ]
+    }
+   }
+  ],
+  "group_by": []
+ }
+}

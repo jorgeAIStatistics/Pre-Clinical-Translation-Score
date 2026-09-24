@@ -1,0 +1,57 @@
+{
+ "_fixture_note": "RECORDED LIVE FROM https://api.platform.opentargets.org/api/v4/graphql ON 2026-09-24 (HTTP POST)",
+ "endpoint": "https://api.platform.opentargets.org/api/v4/graphql",
+ "params": {},
+ "request_body": {
+  "query": "query TrsTargetSearch($queryString: String!, $size: Int!) {\n  search(queryString: $queryString, entityNames: [\"target\"], page: {index: 0, size: $size}) {\n    total\n    hits {\n      id\n      name\n      entity\n      object { ... on Target { id approvedSymbol approvedName biotype } }\n    }\n  }\n}",
+  "variables": {
+   "queryString": "KRAS",
+   "size": 3
+  }
+ },
+ "status_code": 200,
+ "media_type": "application/json",
+ "fetched_at": "2026-09-24T04:43:04.857390+00:00",
+ "content": {
+  "data": {
+   "search": {
+    "total": 8,
+    "hits": [
+     {
+      "id": "ENSG00000133703",
+      "name": "KRAS",
+      "entity": "target",
+      "object": {
+       "id": "ENSG00000133703",
+       "approvedSymbol": "KRAS",
+       "approvedName": "KRas proto-oncogene, GTPase",
+       "biotype": "protein_coding"
+      }
+     },
+     {
+      "id": "ENSG00000220635",
+      "name": "KRASP1",
+      "entity": "target",
+      "object": {
+       "id": "ENSG00000220635",
+       "approvedSymbol": "KRASP1",
+       "approvedName": "KRas proto-oncogene, GTPase pseudogene 1",
+       "biotype": "processed_pseudogene"
+      }
+     },
+     {
+      "id": "ENSG00000270170",
+      "name": "NCBP2AS2",
+      "entity": "target",
+      "object": {
+       "id": "ENSG00000270170",
+       "approvedSymbol": "NCBP2AS2",
+       "approvedName": "NCBP2 antisense 2 (head to head)",
+       "biotype": "protein_coding"
+      }
+     }
+    ]
+   }
+  }
+ }
+}

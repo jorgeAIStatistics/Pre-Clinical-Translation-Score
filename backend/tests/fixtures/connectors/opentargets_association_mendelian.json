@@ -1,0 +1,95 @@
+{
+ "_fixture_note": "RECORDED LIVE FROM https://api.platform.opentargets.org/api/v4/graphql ON 2026-09-24 (HTTP POST)",
+ "endpoint": "https://api.platform.opentargets.org/api/v4/graphql",
+ "params": {},
+ "request_body": {
+  "query": "query TrsTargetDiseaseAssociation($ensemblId: String!, $diseaseIds: [String!]) {\n  target(ensemblId: $ensemblId) {\n    id\n    approvedSymbol\n    approvedName\n    biotype\n    associatedDiseases(Bs: $diseaseIds, page: {index: 0, size: 1}) {\n      count\n      rows {\n        score\n        disease { id name }\n        datatypeScores { id score }\n        datasourceScores { id score }\n      }\n    }\n  }\n}",
+  "variables": {
+   "ensemblId": "ENSG00000133703",
+   "diseaseIds": [
+    "MONDO_0018997"
+   ]
+  }
+ },
+ "status_code": 200,
+ "media_type": "application/json",
+ "fetched_at": "2026-09-24T04:46:36.800249+00:00",
+ "content": {
+  "data": {
+   "target": {
+    "id": "ENSG00000133703",
+    "approvedSymbol": "KRAS",
+    "approvedName": "KRas proto-oncogene, GTPase",
+    "biotype": "protein_coding",
+    "associatedDiseases": {
+     "count": 1,
+     "rows": [
+      {
+       "score": 0.8335596693339207,
+       "disease": {
+        "id": "MONDO_0018997",
+        "name": "Noonan syndrome"
+       },
+       "datatypeScores": [
+        {
+         "id": "genetic_literature",
+         "score": 0.8629165362838598
+        },
+        {
+         "id": "affected_pathway",
+         "score": 0.9190679877429972
+        },
+        {
+         "id": "literature",
+         "score": 0.19660652663001532
+        },
+        {
+         "id": "genetic_association",
+         "score": 0.865553665248194
+        },
+        {
+         "id": "animal_model",
+         "score": 0.42259118864826517
+        }
+       ],
+       "datasourceScores": [
+        {
+         "id": "genomics_england",
+         "score": 0.9549947196932794
+        },
+        {
+         "id": "eva",
+         "score": 0.9299593821573373
+        },
+        {
+         "id": "reactome",
+         "score": 0.9190679877429972
+        },
+        {
+         "id": "clingen",
+         "score": 0.607930797611621
+        },
+        {
+         "id": "gene2phenotype",
+         "score": 0.607930797611621
+        },
+        {
+         "id": "orphanet",
+         "score": 0.607930797611621
+        },
+        {
+         "id": "impc",
+         "score": 0.42259118864826517
+        },
+        {
+         "id": "europepmc",
+         "score": 0.19660652663001532
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ }
+}

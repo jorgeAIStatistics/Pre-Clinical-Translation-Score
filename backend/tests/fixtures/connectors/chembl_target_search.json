@@ -1,0 +1,30 @@
+{
+ "_fixture_note": "RECORDED LIVE FROM https://www.ebi.ac.uk/chembl/api/data/target/search.json?q=KRAS&limit=1&only=target_chembl_id%2Cpref_name%2Ctarget_type%2Corganism%2Ctax_id ON 2026-09-24",
+ "endpoint": "https://www.ebi.ac.uk/chembl/api/data/target/search.json",
+ "params": {
+  "q": "KRAS",
+  "limit": "1",
+  "only": "target_chembl_id,pref_name,target_type,organism,tax_id"
+ },
+ "status_code": 200,
+ "media_type": "application/json",
+ "fetched_at": "2026-09-24T04:45:48.332618+00:00",
+ "content": {
+  "page_meta": {
+   "limit": 1,
+   "next": "/chembl/api/data/target/search.json?limit=1&offset=1&q=KRAS&only=target_chembl_id%2Cpref_name%2Ctarget_type%2Corganism%2Ctax_id",
+   "offset": 0,
+   "previous": null,
+   "total_count": 9
+  },
+  "targets": [
+   {
+    "organism": "Homo sapiens",
+    "pref_name": "GTPase KRas",
+    "target_chembl_id": "CHEMBL2189121",
+    "target_type": "SINGLE PROTEIN",
+    "tax_id": 9606
+   }
+  ]
+ }
+}

@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Design tokens.
+
+   A light, high-contrast scientific interface. Three commitments shape it:
+
+   1. Colour is never the only carrier of meaning. Risk is communicated by a
+      number, a position on a shared scale, and a written label; the colour
+      ramp is a fourth, redundant channel. A reader with any form of colour
+      vision deficiency loses nothing.
+   2. The ramp is perceptually ordered and single-direction (cool → warm), not
+      a red/amber/green traffic light. A traffic light asserts three discrete
+      verdicts; a calibrated probability is continuous and deserves a
+      continuous encoding.
+   3. Numerals are tabular everywhere. Columns of probabilities that do not
+      align are harder to compare, and comparison is the whole task.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-serif: "Source Serif 4", ui-serif, Georgia, serif;
+
+  /* Neutral scale — warm grey, easier on the eye than pure slate for long reads */
+  --color-ink-50:  #faf9f7;
+  --color-ink-100: #f4f2ef;
+  --color-ink-200: #e7e4df;
+  --color-ink-300: #d3cec7;
+  --color-ink-400: #a8a29a;
+  --color-ink-500: #78716a;
+  --color-ink-600: #57534d;
+  --color-ink-700: #44403a;
+  --color-ink-800: #292524;
+  --color-ink-900: #1c1917;
+
+  /* Accent — deep teal. Used for interaction and emphasis, never for risk. */
+  --color-accent-50:  #eefbfa;
+  --color-accent-100: #d3f4f1;
+  --color-accent-300: #7dd8d1;
+  --color-accent-500: #1d8d86;
+  --color-accent-600: #16706b;
+  --color-accent-700: #125956;
+  --color-accent-900: #0b3634;
+
+  /* Risk ramp — continuous, cool to warm. Redundant with number + position. */
+  --color-risk-1: #3d6b8e;
+  --color-risk-2: #6d92a8;
+  --color-risk-3: #b8a888;
+  --color-risk-4: #c98b5e;
+  --color-risk-5: #a85a41;
+
+  /* Evidence direction — distinguishable without hue via icon and label */
+  --color-support: #2f7d6e;
+  --color-refute: #a6543f;
+  --color-neutral: #8a857c;
+
+  --radius-card: 6px;
+}
+
+:root {
+  --surface: var(--color-ink-50);
+  --surface-raised: #ffffff;
+  --border-subtle: var(--color-ink-200);
+  --border-strong: var(--color-ink-300);
+}
+
+html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+body {
+  background: var(--surface);
+  color: var(--color-ink-800);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv05" 1, "ss01" 1;
+}
+
+/* Every figure in the product is tabular. */
+.tnum { font-variant-numeric: tabular-nums lining-nums; }
+
+/* Focus is always visible — this is a keyboard-heavy analytical tool. */
+:where(a, button, [role="button"], input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent-600);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Thin, unobtrusive scrollbars for dense tables */
+.scroll-thin { scrollbar-width: thin; scrollbar-color: var(--color-ink-300) transparent; }
+.scroll-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: var(--color-ink-300); border-radius: 4px; }
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
+
+/* Hairline rules that read as engraved rather than drawn */
+.rule { border-color: var(--border-subtle); }
+
+/* Diagonal hatch for "no data" cells — a pattern, not a colour, so the
+   distinction between "empty" and "zero" survives greyscale printing. */
+.hatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-ink-200) 0px,
+    var(--color-ink-200) 1px,
+    transparent 1px,
+    transparent 5px
+  );
+}

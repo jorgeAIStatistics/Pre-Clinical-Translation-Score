@@ -1,0 +1,35 @@
+# Local PostgreSQL for development against the production database target.
+#
+# The platform runs on SQLite with no external services at all — that is the
+# default and it is what `make demo` uses. This file exists for the case that
+# matters before a real deployment: confirming the same models and the same
+# Alembic history work on PostgreSQL, which is what production actually runs.
+#
+#   docker compose up -d
+#   export TRS_DATABASE_URL=postgresql+psycopg://trs:trs@localhost:5432/trs
+#   cd backend && alembic upgrade head && python -m trs.cli pipeline
+#
+# Requires the `postgres` extra:  pip install -e 'backend[postgres]'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: trs-postgres
+    environment:
+      POSTGRES_USER: trs
+      POSTGRES_PASSWORD: trs
+      POSTGRES_DB: trs
+      # Deterministic collation so index ordering matches across machines.
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - trs-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trs -d trs"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  trs-pgdata:

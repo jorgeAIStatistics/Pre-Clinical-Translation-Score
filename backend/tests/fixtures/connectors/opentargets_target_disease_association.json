@@ -1,0 +1,75 @@
+{
+ "_fixture_note": "RECORDED LIVE FROM https://api.platform.opentargets.org/api/v4/graphql ON 2026-09-24 (HTTP POST)",
+ "endpoint": "https://api.platform.opentargets.org/api/v4/graphql",
+ "params": {},
+ "request_body": {
+  "query": "query TrsTargetDiseaseAssociation($ensemblId: String!, $diseaseIds: [String!]) {\n  target(ensemblId: $ensemblId) {\n    id\n    approvedSymbol\n    approvedName\n    biotype\n    associatedDiseases(Bs: $diseaseIds, page: {index: 0, size: 1}) {\n      count\n      rows {\n        score\n        disease { id name }\n        datatypeScores { id score }\n        datasourceScores { id score }\n      }\n    }\n  }\n}",
+  "variables": {
+   "ensemblId": "ENSG00000133703",
+   "diseaseIds": [
+    "MONDO_0005061"
+   ]
+  }
+ },
+ "status_code": 200,
+ "media_type": "application/json",
+ "fetched_at": "2026-09-24T04:43:05.423799+00:00",
+ "content": {
+  "data": {
+   "target": {
+    "id": "ENSG00000133703",
+    "approvedSymbol": "KRAS",
+    "approvedName": "KRas proto-oncogene, GTPase",
+    "biotype": "protein_coding",
+    "associatedDiseases": {
+     "count": 1,
+     "rows": [
+      {
+       "score": 0.7028458143314119,
+       "disease": {
+        "id": "MONDO_0005061",
+        "name": "lung adenocarcinoma"
+       },
+       "datatypeScores": [
+        {
+         "id": "literature",
+         "score": 0.9591579437867949
+        },
+        {
+         "id": "affected_pathway",
+         "score": 0.9285669064556789
+        },
+        {
+         "id": "somatic_mutation",
+         "score": 0.8224435219117215
+        }
+       ],
+       "datasourceScores": [
+        {
+         "id": "intogen",
+         "score": 0.9066612367713315
+        },
+        {
+         "id": "cancer_gene_census",
+         "score": 0.607930797611621
+        },
+        {
+         "id": "eva_somatic",
+         "score": 0.547137717850459
+        },
+        {
+         "id": "cancer_biomarkers",
+         "score": 0.9285669064556789
+        },
+        {
+         "id": "europepmc",
+         "score": 0.9591579437867949
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ }
+}

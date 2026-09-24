@@ -1,0 +1,70 @@
+{
+ "_fixture_note": "RECORDED LIVE FROM https://www.ebi.ac.uk/chembl/api/data/mechanism.json?molecule_chembl_id=CHEMBL4535757&limit=20 ON 2026-09-24",
+ "endpoint": "https://www.ebi.ac.uk/chembl/api/data/mechanism.json",
+ "params": {
+  "molecule_chembl_id": "CHEMBL4535757",
+  "limit": "20"
+ },
+ "status_code": 200,
+ "media_type": "application/json",
+ "fetched_at": "2026-09-24T04:43:07.181687+00:00",
+ "content": {
+  "mechanisms": [
+   {
+    "action_type": "INHIBITOR",
+    "binding_site_comment": null,
+    "direct_interaction": 1,
+    "disease_efficacy": 1,
+    "max_phase": 4,
+    "mec_id": 8492,
+    "mechanism_comment": "Covalent inhibitor",
+    "mechanism_of_action": "GTPase KRas inhibitor",
+    "mechanism_refs": [
+     {
+      "ref_id": "31189530",
+      "ref_type": "PubMed",
+      "ref_url": "http://europepmc.org/abstract/MED/31189530"
+     },
+     {
+      "ref_id": "31666701",
+      "ref_type": "PubMed",
+      "ref_url": "http://europepmc.org/abstract/MED/31666701"
+     },
+     {
+      "ref_id": "31820981",
+      "ref_type": "PubMed",
+      "ref_url": "http://europepmc.org/abstract/MED/31820981"
+     },
+     {
+      "ref_id": "32568546",
+      "ref_type": "PubMed",
+      "ref_url": "http://europepmc.org/abstract/MED/32568546"
+     }
+    ],
+    "molecular_mechanism": 1,
+    "molecule_chembl_id": "CHEMBL4535757",
+    "parent_molecule_chembl_id": "CHEMBL4535757",
+    "record_id": 3489912,
+    "selectivity_comment": null,
+    "site_id": null,
+    "target_chembl_id": "CHEMBL2189121",
+    "variant_sequence": {
+     "accession": "P01116",
+     "isoform": 1,
+     "mutation": "G12C",
+     "organism": "Homo sapiens",
+     "sequence": "MTEYKLVVVGACGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQEEYSAMRDQYMRTGEGFLCVFAINNTKSFEDIHHYREQIKRVKDSEDVPMVLVGNKCDLPSRTVDTKQAQDLARSYGIPFIETSAKTRQRVEDAFYTLVREIRQYRLKKISKEEKTPGCVKIKKCIIM",
+     "tax_id": 9606,
+     "version": 1
+    }
+   }
+  ],
+  "page_meta": {
+   "limit": 20,
+   "next": null,
+   "offset": 0,
+   "previous": null,
+   "total_count": 1
+  }
+ }
+}

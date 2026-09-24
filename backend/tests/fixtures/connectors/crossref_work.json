@@ -1,0 +1,866 @@
+{
+ "_fixture_note": "RECORDED LIVE FROM https://api.crossref.org/works/10.1038/s41417-021-00383-9 ON 2026-09-24",
+ "endpoint": "https://api.crossref.org/works/10.1038/s41417-021-00383-9",
+ "params": {},
+ "status_code": 200,
+ "media_type": "application/json",
+ "fetched_at": "2026-09-24T04:45:47.292773+00:00",
+ "content": {
+  "status": "ok",
+  "message-type": "work",
+  "message-version": "1.0.0",
+  "message": {
+   "indexed": {
+    "date-parts": [
+     [
+      2026,
+      9,
+      11
+     ]
+    ],
+    "date-time": "2026-09-11T04:51:40Z",
+    "timestamp": 1789102300421,
+    "version": "build-2803163510"
+   },
+   "reference-count": 45,
+   "publisher": "Springer Science and Business Media LLC",
+   "issue": "7",
+   "license": [
+    {
+     "start": {
+      "date-parts": [
+       [
+        2021,
+        9,
+        1
+       ]
+      ],
+      "date-time": "2021-09-01T00:00:00Z",
+      "timestamp": 1630454400000
+     },
+     "content-version": "tdm",
+     "delay-in-days": 0,
+     "URL": "https://www.springernature.com/gp/researchers/text-and-data-mining"
+    },
+    {
+     "start": {
+      "date-parts": [
+       [
+        2021,
+        9,
+        1
+       ]
+      ],
+      "date-time": "2021-09-01T00:00:00Z",
+      "timestamp": 1630454400000
+     },
+     "content-version": "vor",
+     "delay-in-days": 0,
+     "URL": "https://www.springernature.com/gp/researchers/text-and-data-mining"
+    }
+   ],
+   "content-domain": {
+    "domain": [
+     "link.springer.com"
+    ],
+    "crossmark-restriction": false
+   },
+   "short-container-title": [
+    "Cancer Gene Ther"
+   ],
+   "published-print": {
+    "date-parts": [
+     [
+      2022,
+      7
+     ]
+    ]
+   },
+   "DOI": "10.1038/s41417-021-00383-9",
+   "type": "journal-article",
+   "created": {
+    "date-parts": [
+     [
+      2021,
+      9,
+      1
+     ]
+    ],
+    "date-time": "2021-09-01T08:04:26Z",
+    "timestamp": 1630483466000
+   },
+   "page": "875-878",
+   "update-policy": "https://doi.org/10.1007/springer_crossmark_policy",
+   "source": "Crossref",
+   "is-referenced-by-count": 206,
+   "title": [
+    "The KRAS-G12C inhibitor: activity and resistance"
+   ],
+   "prefix": "10.1038",
+   "volume": "29",
+   "author": [
+    {
+     "given": "Jiao",
+     "family": "Liu",
+     "sequence": "first",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "given": "Rui",
+     "family": "Kang",
+     "sequence": "additional",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "ORCID": "https://orcid.org/0000-0002-1903-6180",
+     "authenticated-orcid": false,
+     "given": "Daolin",
+     "family": "Tang",
+     "sequence": "additional",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    }
+   ],
+   "member": "297",
+   "published-online": {
+    "date-parts": [
+     [
+      2021,
+      9,
+      1
+     ]
+    ]
+   },
+   "reference": [
+    {
+     "key": "383_CR1",
+     "doi-asserted-by": "publisher",
+     "first-page": "646",
+     "DOI": "10.1016/j.cell.2011.02.013",
+     "volume": "144",
+     "author": "D Hanahan",
+     "year": "2011",
+     "unstructured": "Hanahan D, Weinberg RA. Hallmarks of cancer: the next generation. Cell. 2011;144:646–74.",
+     "journal-title": "Cell"
+    },
+    {
+     "key": "383_CR2",
+     "doi-asserted-by": "publisher",
+     "DOI": "10.1038/s41467-020-17670-y",
+     "volume": "11",
+     "author": "C Robert",
+     "year": "2020",
+     "unstructured": "Robert C. A decade of immune-checkpoint inhibitors in cancer therapy. Nat Commun. 2020;11:3801.",
+     "journal-title": "Nat Commun"
+    },
+    {
+     "key": "383_CR3",
+     "doi-asserted-by": "publisher",
+     "first-page": "587",
+     "DOI": "10.2217/pgs-2021-0045",
+     "volume": "22",
+     "author": "K Saleh",
+     "year": "2021",
+     "unstructured": "Saleh K, Kordahi M, Felefly T, Kourie HR, Khalife N. KRAS-targeted therapies in advanced solid cancers: drug the undruggable? Pharmacogenomics. 2021;22:587–90.",
+     "journal-title": "Pharmacogenomics"
+    },
+    {
+     "key": "383_CR4",
+     "doi-asserted-by": "publisher",
+     "first-page": "533",
+     "DOI": "10.1038/s41573-020-0068-6",
+     "volume": "19",
+     "author": "AR Moore",
+     "year": "2020",
+     "unstructured": "Moore AR, Rosenberg SC, McCormick F, Malek S. RAS-targeted therapies: is the undruggable drugged? Nat Rev Drug Disco. 2020;19:533–52.",
+     "journal-title": "Nat Rev Drug Disco"
+    },
+    {
+     "key": "383_CR5",
+     "doi-asserted-by": "publisher",
+     "first-page": "17",
+     "DOI": "10.1016/j.cell.2017.06.009",
+     "volume": "170",
+     "author": "DK Simanshu",
+     "year": "2017",
+     "unstructured": "Simanshu DK, Nissley DV, McCormick F. RAS proteins and their regulators in human disease. Cell. 2017;170:17–33.",
+     "journal-title": "Cell"
+    },
+    {
+     "key": "383_CR6",
+     "doi-asserted-by": "publisher",
+     "DOI": "10.1038/srep21949",
+     "volume": "6",
+     "author": "S Lu",
+     "year": "2016",
+     "unstructured": "Lu S, Jang H, Nussinov R, Zhang J. The structural basis of oncogenic mutations G12, G13 and Q61 in small GTPase K-Ras4B. Sci Rep. 2016;6:21949.",
+     "journal-title": "Sci Rep."
+    },
+    {
+     "key": "383_CR7",
+     "doi-asserted-by": "publisher",
+     "first-page": "a031435.",
+     "DOI": "10.1101/cshperspect.a031435",
+     "volume": "8",
+     "author": "AM Waters",
+     "year": "2018",
+     "unstructured": "Waters AM. Der CJ KRAS: the critical driver and therapeutic target for pancreatic cancer. Cold Spring Harb Perspect Med. 2018;8:a031435.",
+     "journal-title": "Cold Spring Harb Perspect Med"
+    },
+    {
+     "key": "383_CR8",
+     "doi-asserted-by": "publisher",
+     "first-page": "850",
+     "DOI": "10.1016/j.cell.2020.09.044",
+     "volume": "183",
+     "author": "D Kim",
+     "year": "2020",
+     "unstructured": "Kim D, Xue JY, Lito P. Targeting KRAS(G12C): from inhibitory mechanism to modulation of antitumor effects in patients. Cell. 2020;183:850–9.",
+     "journal-title": "Cell"
+    },
+    {
+     "key": "383_CR9",
+     "doi-asserted-by": "publisher",
+     "first-page": "2209",
+     "DOI": "10.1158/1078-0432.CCR-20-4023",
+     "volume": "27",
+     "author": "KC Arbour",
+     "year": "2021",
+     "unstructured": "Arbour KC, Rizvi H, Plodkowski AJ, Hellmann MD, Knezevic A, Heller G, et al. Treatment outcomes and clinical characteristics of patients with KRAS-G12C-mutant non-small cell lung cancer. Clin Cancer Res. 2021;27:2209–15.",
+     "journal-title": "Clin Cancer Res"
+    },
+    {
+     "key": "383_CR10",
+     "doi-asserted-by": "publisher",
+     "first-page": "421",
+     "DOI": "10.1038/s41586-019-1884-x",
+     "volume": "577",
+     "author": "JY Xue",
+     "year": "2020",
+     "unstructured": "Xue JY, Zhao Y, Aronowitz J, Mai TT, Vides A, Qeriqi B, et al. Rapid non-uniform adaptation to conformation-specific KRAS(G12C) inhibition. Nature. 2020;577:421–5.",
+     "journal-title": "Nature"
+    },
+    {
+     "key": "383_CR11",
+     "doi-asserted-by": "publisher",
+     "first-page": "167",
+     "DOI": "10.1038/nrm1587",
+     "volume": "6",
+     "author": "KL Rossman",
+     "year": "2005",
+     "unstructured": "Rossman KL, Der CJ, Sondek J. GEF means go: turning on RHO GTPases with guanine nucleotide-exchange factors. Nat Rev Mol Cell Biol. 2005;6:167–80.",
+     "journal-title": "Nat Rev Mol Cell Biol"
+    },
+    {
+     "key": "383_CR12",
+     "doi-asserted-by": "publisher",
+     "first-page": "142",
+     "DOI": "10.1158/2159-8290.CD-20-0142",
+     "volume": "11",
+     "author": "MH Hofmann",
+     "year": "2021",
+     "unstructured": "Hofmann MH, Gmachl M, Ramharter J, Savarese F, Gerlach D, Marszalek JR, et al. BI-3406, a potent and selective SOS1-KRAS interaction inhibitor, is effective in KRAS-driven cancers through combined MEK inhibition. Cancer Disco. 2021;11:142–57.",
+     "journal-title": "Cancer Disco"
+    },
+    {
+     "key": "383_CR13",
+     "doi-asserted-by": "publisher",
+     "first-page": "961",
+     "DOI": "10.1038/s41591-018-0023-9",
+     "volume": "24",
+     "author": "S Mainardi",
+     "year": "2018",
+     "unstructured": "Mainardi S, Mulero-Sanchez A, Prahallad A, Germano G, Bosma A, Krimpenfort P, et al. SHP2 is required for growth of KRAS-mutant non-small-cell lung cancer in vivo. Nat Med. 2018;24:961–7.",
+     "journal-title": "Nat Med"
+    },
+    {
+     "key": "383_CR14",
+     "doi-asserted-by": "publisher",
+     "first-page": "954",
+     "DOI": "10.1038/s41591-018-0024-8",
+     "volume": "24",
+     "author": "DA Ruess",
+     "year": "2018",
+     "unstructured": "Ruess DA, Heynen GJ, Ciecielski KJ, Ai J, Berninger A, Kabacaoglu D, et al. Mutant KRAS-driven cancers depend on PTPN11/SHP2 phosphatase. Nat Med. 2018;24:954–60.",
+     "journal-title": "Nat Med"
+    },
+    {
+     "key": "383_CR15",
+     "doi-asserted-by": "publisher",
+     "first-page": "968",
+     "DOI": "10.1038/s41591-018-0022-x",
+     "volume": "24",
+     "author": "GS Wong",
+     "year": "2018",
+     "unstructured": "Wong GS, Zhou J, Liu JB, Wu Z, Xu X, Li T, et al. Targeting wild-type KRAS-amplified gastroesophageal cancer through combined MEK and SHP2 inhibition. Nat Med. 2018;24:968–77.",
+     "journal-title": "Nat Med"
+    },
+    {
+     "key": "383_CR16",
+     "doi-asserted-by": "publisher",
+     "first-page": "2551",
+     "DOI": "10.1073/pnas.1812963116",
+     "volume": "116",
+     "author": "RC Hillig",
+     "year": "2019",
+     "unstructured": "Hillig RC, Sautier B, Schroeder J, Moosmayer D, Hilpmann A, Stegmann CM, et al. Discovery of potent SOS1 inhibitors that block RAS activation via disruption of the RAS-SOS1 interaction. Proc Natl Acad Sci USA. 2019;116:2551–60.",
+     "journal-title": "Proc Natl Acad Sci USA"
+    },
+    {
+     "key": "383_CR17",
+     "doi-asserted-by": "publisher",
+     "first-page": "189",
+     "DOI": "10.1016/j.csbj.2019.12.004",
+     "volume": "18",
+     "author": "T Pantsar",
+     "year": "2020",
+     "unstructured": "Pantsar T. The current understanding of KRAS protein structure and dynamics. Comput Struct Biotechnol J. 2020;18:189–98.",
+     "journal-title": "Comput Struct Biotechnol J"
+    },
+    {
+     "key": "383_CR18",
+     "doi-asserted-by": "publisher",
+     "first-page": "548",
+     "DOI": "10.1038/nature12796",
+     "volume": "503",
+     "author": "JM Ostrem",
+     "year": "2013",
+     "unstructured": "Ostrem JM, Peters U, Sos ML, Wells JA, Shokat KM. K-Ras(G12C) inhibitors allosterically control GTP affinity and effector interactions. Nature. 2013;503:548–51.",
+     "journal-title": "Nature"
+    },
+    {
+     "key": "383_CR19",
+     "doi-asserted-by": "publisher",
+     "first-page": "709",
+     "DOI": "10.1038/s41571-018-0105-0",
+     "volume": "15",
+     "author": "MB Ryan",
+     "year": "2018",
+     "unstructured": "Ryan MB, Corcoran RB. Therapeutic strategies to target RAS-mutant cancers. Nat Rev Clin Oncol. 2018;15:709–20.",
+     "journal-title": "Nat Rev Clin Oncol"
+    },
+    {
+     "key": "383_CR20",
+     "doi-asserted-by": "publisher",
+     "first-page": "6679",
+     "DOI": "10.1021/acs.jmedchem.9b02052",
+     "volume": "63",
+     "author": "JB Fell",
+     "year": "2020",
+     "unstructured": "Fell JB, Fischer JP, Baer BR, Blake JF, Bouhana K, Briere DM, et al. Identification of the clinical development candidate MRTX849, a covalent KRAS(G12C) inhibitor for the treatment of cancer. J Med Chem. 2020;63:6679–93.",
+     "journal-title": "J Med Chem"
+    },
+    {
+     "key": "383_CR21",
+     "doi-asserted-by": "publisher",
+     "first-page": "604",
+     "DOI": "10.1126/science.aad6204",
+     "volume": "351",
+     "author": "P Lito",
+     "year": "2016",
+     "unstructured": "Lito P, Solomon M, Li LS, Hansen R, Rosen N. Allele-specific inhibitors inactivate mutant KRAS G12C by a trapping mechanism. Science. 2016;351:604–8.",
+     "journal-title": "Science"
+    },
+    {
+     "key": "383_CR22",
+     "doi-asserted-by": "publisher",
+     "first-page": "578",
+     "DOI": "10.1016/j.cell.2018.01.006",
+     "volume": "172",
+     "author": "MR Janes",
+     "year": "2018",
+     "unstructured": "Janes MR, Zhang J, Li LS, Hansen R, Peters U, Guo X, et al. Targeting KRAS mutant cancers with a covalent G12C-specific inhibitor. Cell. 2018;172:578–89.",
+     "journal-title": "Cell"
+    },
+    {
+     "key": "383_CR23",
+     "doi-asserted-by": "publisher",
+     "first-page": "217",
+     "DOI": "10.1038/s41586-019-1694-1",
+     "volume": "575",
+     "author": "J Canon",
+     "year": "2019",
+     "unstructured": "Canon J, Rex K, Saiki AY, Mohr C, Cooke K, Bagal D, et al. The clinical KRAS(G12C) inhibitor AMG 510 drives anti-tumour immunity. Nature. 2019;575:217–23.",
+     "journal-title": "Nature"
+    },
+    {
+     "key": "383_CR24",
+     "doi-asserted-by": "publisher",
+     "first-page": "54",
+     "DOI": "10.1158/2159-8290.CD-19-1167",
+     "volume": "10",
+     "author": "J Hallin",
+     "year": "2020",
+     "unstructured": "Hallin J, Engstrom LD, Hargis L, Calinisan A, Aranda R, Briere DM, et al. The KRAS(G12C) inhibitor MRTX849 provides insight toward therapeutic susceptibility of KRAS-mutant cancers in mouse models and patients. Cancer Disco. 2020;10:54–71.",
+     "journal-title": "Cancer Disco"
+    },
+    {
+     "key": "383_CR25",
+     "doi-asserted-by": "publisher",
+     "first-page": "1101",
+     "DOI": "10.1016/j.annonc.2021.06.001",
+     "volume": "9",
+     "author": "M Reck",
+     "year": "2021",
+     "unstructured": "Reck M, Carbone DP, Garassino M, Barlesi F. Targeting KRAS in non-small-cell lung cancer: recent progress and new approaches. Ann Oncol. 2021;9:1101–10.",
+     "journal-title": "Ann Oncol"
+    },
+    {
+     "key": "383_CR26",
+     "doi-asserted-by": "publisher",
+     "first-page": "261",
+     "DOI": "10.1177/1947601911408079",
+     "volume": "2",
+     "author": "E Castellano",
+     "year": "2011",
+     "unstructured": "Castellano E, Downward J. RAS interaction with PI3K: more than just another effector pathway. Genes Cancer. 2011;2:261–74.",
+     "journal-title": "Genes Cancer"
+    },
+    {
+     "key": "383_CR27",
+     "doi-asserted-by": "publisher",
+     "first-page": "e000337.",
+     "DOI": "10.1136/jitc-2019-000337",
+     "volume": "8",
+     "author": "L Galluzzi",
+     "year": "2020",
+     "unstructured": "Galluzzi L, Vitale I, Warren S, Adjemian S, Agostinis P, Martinez AB, et al. Consensus guidelines for the definition, detection and interpretation of immunogenic cell death. J Immunother Cancer. 2020;8:e000337.",
+     "journal-title": "J Immunother Cancer"
+    },
+    {
+     "key": "383_CR28",
+     "doi-asserted-by": "publisher",
+     "first-page": "2371",
+     "DOI": "10.1056/NEJMoa2103695",
+     "volume": "384",
+     "author": "F Skoulidis",
+     "year": "2021",
+     "unstructured": "Skoulidis F, Li BT, Dy GK, Price TJ, Falchook GS, Wolf J, et al. Sotorasib for lung cancers with KRAS p.G12C mutation. N Engl J Med. 2021;384:2371–81.",
+     "journal-title": "N Engl J Med"
+    },
+    {
+     "key": "383_CR29",
+     "doi-asserted-by": "publisher",
+     "first-page": "1207",
+     "DOI": "10.1056/NEJMoa1917239",
+     "volume": "383",
+     "author": "DS Hong",
+     "year": "2020",
+     "unstructured": "Hong DS, Fakih MG, Strickler JH, Desai J, Durm GA, Shapiro GI, et al. KRAS(G12C) inhibition with sotorasib in advanced solid tumors. N Engl J Med. 2020;383:1207–17.",
+     "journal-title": "N Engl J Med"
+    },
+    {
+     "key": "383_CR30",
+     "doi-asserted-by": "publisher",
+     "first-page": "1005",
+     "DOI": "10.1016/j.chembiol.2017.06.017",
+     "volume": "24",
+     "author": "M Zeng",
+     "year": "2017",
+     "unstructured": "Zeng M, Lu J, Li L, Feru F, Quan C, Gero TW, et al. Potent and selective covalent quinazoline inhibitors of KRAS G12C. Cell Chem Biol. 2017;24:1005–16.",
+     "journal-title": "Cell Chem Biol"
+    },
+    {
+     "key": "383_CR31",
+     "doi-asserted-by": "publisher",
+     "first-page": "151.",
+     "DOI": "10.3390/cancers13010151",
+     "volume": "13",
+     "author": "V Dunnett-Kane",
+     "year": "2021",
+     "unstructured": "Dunnett-Kane V, Nicola P, Blackhall F, Lindsay C. Mechanisms of resistance to KRAS(G12C) inhibitors. Cancers. 2021;13:151.",
+     "journal-title": "Cancers"
+    },
+    {
+     "key": "383_CR32",
+     "doi-asserted-by": "publisher",
+     "first-page": "1633",
+     "DOI": "10.1158/1078-0432.CCR-19-3523",
+     "volume": "26",
+     "author": "MB Ryan",
+     "year": "2020",
+     "unstructured": "Ryan MB, Fece de la Cruz F, Phat S, Myers DT, Wong E, Shahzade HA, et al. Vertical pathway inhibition overcomes adaptive feedback resistance to KRAS(G12C) inhibition. Clin Cancer Res. 2020;26:1633–43.",
+     "journal-title": "Clin Cancer Res"
+    },
+    {
+     "key": "383_CR33",
+     "doi-asserted-by": "publisher",
+     "first-page": "eaaw9450.",
+     "DOI": "10.1126/scisignal.aaw9450",
+     "volume": "12",
+     "author": "K Lou",
+     "year": "2019",
+     "unstructured": "Lou K, Steri V, Ge AY, Hwang YC, Yogodzinski CH, Shkedi AR, et al. KRAS(G12C) inhibition produces a driver-limited state revealing collateral dependencies. Sci Signal. 2019;12:eaaw9450.",
+     "journal-title": "Sci Signal"
+    },
+    {
+     "key": "383_CR34",
+     "doi-asserted-by": "publisher",
+     "first-page": "4584",
+     "DOI": "10.1016/j.celrep.2020.03.021",
+     "volume": "30",
+     "author": "N Santana-Codina",
+     "year": "2020",
+     "unstructured": "Santana-Codina N, Chandhoke AS, Yu Q, Malachowska B, Kuljanin M, Gikandi A, et al. Defining and targeting adaptations to oncogenic KRAS(G12C) inhibition using quantitative temporal proteomics. Cell Rep. 2020;30:4584–99.",
+     "journal-title": "Cell Rep."
+    },
+    {
+     "key": "383_CR35",
+     "doi-asserted-by": "publisher",
+     "first-page": "2533",
+     "DOI": "10.1158/1078-0432.CCR-20-3872",
+     "volume": "27",
+     "author": "HS Solanki",
+     "year": "2021",
+     "unstructured": "Solanki HS, Welsh EA, Fang B, Izumi V, Darville L, Stone B, et al. Cell type-specific adaptive signaling responses to KRAS(G12C) inhibition. Clin Cancer Res. 2021;27:2533–48.",
+     "journal-title": "Clin Cancer Res"
+    },
+    {
+     "key": "383_CR36",
+     "doi-asserted-by": "publisher",
+     "first-page": "e20201414.",
+     "DOI": "10.1084/jem.20201414",
+     "volume": "218",
+     "author": "C Fedele",
+     "year": "2021",
+     "unstructured": "Fedele C, Li S, Teng KW, Foster CJR, Peng D, Ran H, et al. SHP2 inhibition diminishes KRASG12C cycling and promotes tumor microenvironment remodeling. J Exp Med. 2021;218:e20201414.",
+     "journal-title": "J Exp Med"
+    },
+    {
+     "key": "383_CR37",
+     "doi-asserted-by": "publisher",
+     "first-page": "342",
+     "DOI": "10.1158/1078-0432.CCR-20-2718",
+     "volume": "27",
+     "author": "C Liu",
+     "year": "2021",
+     "unstructured": "Liu C, Lu H, Wang H, Loo A, Zhang X, Yang G, et al. Combinations with allosteric SHP2 inhibitor TNO155 to block receptor tyrosine kinase signaling. Clin Cancer Res. 2021;27:342–54.",
+     "journal-title": "Clin Cancer Res"
+    },
+    {
+     "key": "383_CR38",
+     "doi-asserted-by": "publisher",
+     "first-page": "100131",
+     "DOI": "10.1016/j.xcrm.2020.100131",
+     "volume": "1",
+     "author": "WS Brown",
+     "year": "2020",
+     "unstructured": "Brown WS, McDonald PC, Nemirovsky O, Awrey S, Chafe SC, Schaeffer DF, et al. Overcoming adaptive resistance to KRAS and MEK inhibitors by co-targeting mTORC1/2 complexes in pancreatic cancer. Cell Rep. Med. 2020;1:100131.",
+     "journal-title": "Cell Rep. Med"
+    },
+    {
+     "key": "383_CR39",
+     "doi-asserted-by": "publisher",
+     "first-page": "5962",
+     "DOI": "10.1158/1078-0432.CCR-20-2077",
+     "volume": "26",
+     "author": "Y Adachi",
+     "year": "2020",
+     "unstructured": "Adachi Y, Ito K, Hayashi Y, Kimura R, Tan TZ, Yamaguchi R, et al. Epithelial-to-mesenchymal transition is a cause of both intrinsic and acquired resistance to KRAS G12C inhibitor in KRAS G12C-mutant non-small cell lung cancer. Clin Cancer Res. 2020;26:5962–73.",
+     "journal-title": "Clin Cancer Res"
+    },
+    {
+     "key": "383_CR40",
+     "doi-asserted-by": "publisher",
+     "first-page": "334",
+     "DOI": "10.1158/1078-0432.CCR-17-1841",
+     "volume": "24",
+     "author": "KC Arbour",
+     "year": "2018",
+     "unstructured": "Arbour KC, Jordan E, Kim HR, Dienstag J, Yu HA, Sanchez-Vega F, et al. Effects of co-occurring genomic alterations on outcomes in patients with KRAS-mutant non-small cell lung cancer. Clin Cancer Res. 2018;24:334–40.",
+     "journal-title": "Clin Cancer Res"
+    },
+    {
+     "key": "383_CR41",
+     "doi-asserted-by": "publisher",
+     "first-page": "2382",
+     "DOI": "10.1056/NEJMoa2105281",
+     "volume": "384",
+     "author": "MM Awad",
+     "year": "2021",
+     "unstructured": "Awad MM, Liu S, Rybkin II, Arbour KC, Dilly J, Zhu VW, et al. Acquired resistance to KRAS(G12C) inhibition in cancer. N Engl J Med. 2021;384:2382–93.",
+     "journal-title": "N Engl J Med"
+    },
+    {
+     "key": "383_CR42",
+     "doi-asserted-by": "publisher",
+     "first-page": "1913",
+     "DOI": "10.1158/2159-8290.CD-21-0365",
+     "volume": "11",
+     "author": "N Tanaka",
+     "year": "2021",
+     "unstructured": "Tanaka N, Lin JJ, Li C, Ryan MB, Zhang J, Kiedrowski LA, et al. Clinical acquired resistance to KRAS(G12C) inhibition through a novel KRAS switch-II pocket mutation and polyclonal alterations converging on RAS-MAPK reactivation. Cancer Discov. 2021;11:1913–22.",
+     "journal-title": "Cancer Discov"
+    },
+    {
+     "key": "383_CR43",
+     "doi-asserted-by": "publisher",
+     "first-page": "1321",
+     "DOI": "10.1016/j.jtho.2021.04.015",
+     "volume": "16",
+     "author": "T Koga",
+     "year": "2021",
+     "unstructured": "Koga T, Suda K, Fujino T, Ohara S, Hamada A, Nishino M, et al. KRAS secondary mutations that confer acquired resistance to KRAS G12C inhibitors, sotorasib and adagrasib, and overcoming strategies: insights from the in vitro experiments. J Thorac Oncol. 2021;16:1321–32.",
+     "journal-title": "J Thorac Oncol"
+    },
+    {
+     "key": "383_CR44",
+     "doi-asserted-by": "publisher",
+     "first-page": "975",
+     "DOI": "10.1158/1535-7163.MCT-20-0462",
+     "volume": "20",
+     "author": "DM Briere",
+     "year": "2021",
+     "unstructured": "Briere DM, Li S, Calinisan A, Sudhakar N, Aranda R, Hargis L, et al. The KRAS(G12C) inhibitor MRTX849 reconditions the tumor immune microenvironment and sensitizes tumors to checkpoint inhibitor therapy. Mol Cancer Ther. 2021;20:975–85.",
+     "journal-title": "Mol Cancer Ther"
+    },
+    {
+     "key": "383_CR45",
+     "doi-asserted-by": "publisher",
+     "first-page": "eaaw7999.",
+     "DOI": "10.1126/scitranslmed.aaw7999",
+     "volume": "11",
+     "author": "M Molina-Arcas",
+     "year": "2019",
+     "unstructured": "Molina-Arcas M, Moore C, Rana S, van Maldegem F, Mugarza E, Romero-Clavijo P, et al. Development of combination therapies to maximize the impact of KRAS-G12C inhibitors in lung cancer. Sci Transl Med. 2019;11:eaaw7999.",
+     "journal-title": "Sci Transl Med"
+    }
+   ],
+   "updated-by": [
+    {
+     "DOI": "10.1038/s41417-023-00692-1",
+     "type": "correction",
+     "label": "Correction",
+     "source": "publisher",
+     "updated": {
+      "date-parts": [
+       [
+        2023,
+        11,
+        15
+       ]
+      ],
+      "date-time": "2023-11-15T00:00:00Z",
+      "timestamp": 1700006400000
+     }
+    }
+   ],
+   "container-title": [
+    "Cancer Gene Therapy"
+   ],
+   "original-title": [],
+   "language": "en",
+   "link": [
+    {
+     "URL": "https://www.nature.com/articles/s41417-021-00383-9.pdf",
+     "content-type": "application/pdf",
+     "content-version": "vor",
+     "intended-application": "text-mining"
+    },
+    {
+     "URL": "https://www.nature.com/articles/s41417-021-00383-9",
+     "content-type": "text/html",
+     "content-version": "vor",
+     "intended-application": "text-mining"
+    },
+    {
+     "URL": "https://www.nature.com/articles/s41417-021-00383-9.pdf",
+     "content-type": "application/pdf",
+     "content-version": "vor",
+     "intended-application": "similarity-checking"
+    }
+   ],
+   "deposited": {
+    "date-parts": [
+     [
+      2023,
+      11,
+      15
+     ]
+    ],
+    "date-time": "2023-11-15T08:02:37Z",
+    "timestamp": 1700035357000
+   },
+   "score": 1,
+   "resource": {
+    "primary": {
+     "URL": "https://www.nature.com/articles/s41417-021-00383-9"
+    }
+   },
+   "subtitle": [],
+   "short-title": [],
+   "issued": {
+    "date-parts": [
+     [
+      2021,
+      9,
+      1
+     ]
+    ]
+   },
+   "references-count": 45,
+   "journal-issue": {
+    "issue": "7",
+    "published-print": {
+     "date-parts": [
+      [
+       2022,
+       7
+      ]
+     ]
+    }
+   },
+   "alternative-id": [
+    "383"
+   ],
+   "URL": "https://doi.org/10.1038/s41417-021-00383-9",
+   "relation": {
+    "correction": [
+     {
+      "id-type": "doi",
+      "id": "10.1038/s41417-023-00692-1",
+      "asserted-by": "object"
+     }
+    ]
+   },
+   "ISSN": [
+    "0929-1903",
+    "1476-5500"
+   ],
+   "issn-type": [
+    {
+     "value": "0929-1903",
+     "type": "print"
+    },
+    {
+     "value": "1476-5500",
+     "type": "electronic"
+    }
+   ],
+   "subject": [],
+   "published": {
+    "date-parts": [
+     [
+      2021,
+      9,
+      1
+     ]
+    ]
+   },
+   "assertion": [
+    {
+     "value": "12 July 2021",
+     "order": 1,
+     "name": "received",
+     "label": "Received",
+     "group": {
+      "name": "ArticleHistory",
+      "label": "Article History"
+     }
+    },
+    {
+     "value": "2 August 2021",
+     "order": 2,
+     "name": "revised",
+     "label": "Revised",
+     "group": {
+      "name": "ArticleHistory",
+      "label": "Article History"
+     }
+    },
+    {
+     "value": "19 August 2021",
+     "order": 3,
+     "name": "accepted",
+     "label": "Accepted",
+     "group": {
+      "name": "ArticleHistory",
+      "label": "Article History"
+     }
+    },
+    {
+     "value": "1 September 2021",
+     "order": 4,
+     "name": "first_online",
+     "label": "First Online",
+     "group": {
+      "name": "ArticleHistory",
+      "label": "Article History"
+     }
+    },
+    {
+     "value": "15 November 2023",
+     "order": 5,
+     "name": "change_date",
+     "label": "Change Date",
+     "group": {
+      "name": "ArticleHistory",
+      "label": "Article History"
+     }
+    },
+    {
+     "value": "Correction",
+     "order": 6,
+     "name": "change_type",
+     "label": "Change Type",
+     "group": {
+      "name": "ArticleHistory",
+      "label": "Article History"
+     }
+    },
+    {
+     "value": "A Correction to this paper has been published:",
+     "order": 7,
+     "name": "change_details",
+     "label": "Change Details",
+     "group": {
+      "name": "ArticleHistory",
+      "label": "Article History"
+     }
+    },
+    {
+     "value": "https://doi.org/10.1038/s41417-023-00692-1",
+     "URL": "https://doi.org/10.1038/s41417-023-00692-1",
+     "order": 8,
+     "name": "change_details",
+     "label": "Change Details",
+     "group": {
+      "name": "ArticleHistory",
+      "label": "Article History"
+     }
+    },
+    {
+     "value": "DT is an editorial board member of <i>Cancer Gene Therapy</i>.",
+     "order": 1,
+     "name": "Ethics",
+     "group": {
+      "name": "EthicsHeading",
+      "label": "Competing interests"
+     }
+    },
+    {
+     "value": "This content has been made available to all.",
+     "name": "free",
+     "label": "Free to read"
+    }
+   ]
+  }
+ }
+}

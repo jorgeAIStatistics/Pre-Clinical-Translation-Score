@@ -1,0 +1,45 @@
+{
+ "_fixture_note": "RECORDED LIVE FROM https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?tool=preclinical-translational-risk-scorer&db=pubmed&term=sotorasib+AND+KRAS%5Btiab%5D&retmax=3&retmode=json&sort=date ON 2026-09-24",
+ "endpoint": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+ "params": {
+  "tool": "preclinical-translational-risk-scorer",
+  "db": "pubmed",
+  "term": "sotorasib AND KRAS[tiab]",
+  "retmax": "3",
+  "retmode": "json",
+  "sort": "date"
+ },
+ "status_code": 200,
+ "media_type": "application/json; charset=UTF-8",
+ "fetched_at": "2026-09-24T04:43:00.676497+00:00",
+ "content": {
+  "header": {
+   "type": "esearch",
+   "version": "0.3"
+  },
+  "esearchresult": {
+   "count": "610",
+   "retmax": "3",
+   "retstart": "0",
+   "idlist": [
+    "42771901",
+    "42759542",
+    "42756523"
+   ],
+   "translationset": [
+    {
+     "from": "sotorasib",
+     "to": "\"sotorasib\"[Supplementary Concept] OR \"sotorasib\"[All Fields]"
+    }
+   ],
+   "querytranslation": "(\"sotorasib\"[Supplementary Concept] OR \"sotorasib\"[All Fields]) AND \"KRAS\"[Title/Abstract]",
+   "warninglist": {
+    "phrasesignored": [],
+    "quotedphrasesnotfound": [],
+    "outputmessages": [
+     "Unknown sort schema 'date' ignored"
+    ]
+   }
+  }
+ }
+}

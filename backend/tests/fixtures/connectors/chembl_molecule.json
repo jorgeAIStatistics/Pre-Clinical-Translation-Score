@@ -1,0 +1,198 @@
+{
+ "_fixture_note": "RECORDED LIVE FROM https://www.ebi.ac.uk/chembl/api/data/molecule/CHEMBL4535757.json ON 2026-09-24",
+ "endpoint": "https://www.ebi.ac.uk/chembl/api/data/molecule/CHEMBL4535757.json",
+ "params": {},
+ "status_code": 200,
+ "media_type": "application/json",
+ "fetched_at": "2026-09-24T04:43:06.621866+00:00",
+ "content": {
+  "atc_classifications": [
+   "L01XX73"
+  ],
+  "availability_type": 1,
+  "biotherapeutic": null,
+  "black_box_warning": 0,
+  "chemical_probe": 1,
+  "chirality": 1,
+  "cross_references": [
+   {
+    "xref_id": "human/EPAR/lumykras",
+    "xref_name": "lumykras",
+    "xref_src": "EMA"
+   },
+   {
+    "xref_id": "https://searchusan.ama-assn.org/finder/usan/search/SOTORASIB/relevant/1/",
+    "xref_name": "SOTORASIB",
+    "xref_src": "USAN"
+   }
+  ],
+  "dosed_ingredient": true,
+  "first_approval": 2021,
+  "first_in_class": 1,
+  "helm_notation": null,
+  "inorganic_flag": 0,
+  "max_phase": "4.0",
+  "molecule_chembl_id": "CHEMBL4535757",
+  "molecule_hierarchy": {
+   "active_chembl_id": "CHEMBL4535757",
+   "molecule_chembl_id": "CHEMBL4535757",
+   "parent_chembl_id": "CHEMBL4535757"
+  },
+  "molecule_properties": {
+   "alogp": "4.48",
+   "aromatic_rings": 4,
+   "full_molformula": "C30H30F2N6O3",
+   "full_mwt": "560.61",
+   "hba": 8,
+   "hbd": 1,
+   "heavy_atoms": 41,
+   "mw_freebase": "560.61",
+   "np_likeness_score": "-0.59",
+   "num_ro5_violations": 1,
+   "psa": "104.45",
+   "qed_weighted": "0.36",
+   "ro3_pass": "N",
+   "rtb": 5
+  },
+  "molecule_structures": {
+   "canonical_smiles": "C=CC(=O)N1CCN(c2nc(=O)n(-c3c(C)ccnc3C(C)C)c3nc(-c4c(O)cccc4F)c(F)cc23)[C@@H](C)C1",
+   "molfile": "\n     RDKit          2D\n\n 41 45  0  0  0  0  0  0  0  0999 V2000\n   -3.7897    1.0106    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -3.0752    0.5981    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -2.3608    1.0106    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -2.3607    1.8356    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.6463    0.5981    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.9318    1.0106    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.6463   -0.2269    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.9319   -0.6394    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.2174   -0.2269    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.2174    0.5981    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    0.4971   -0.6395    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.2116   -0.2270    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.2116    0.5980    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.9260   -0.6395    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    2.6405   -0.2270    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n    2.6405    0.5980    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.9261    1.0105    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.3550    1.0105    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    2.6406    2.2480    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n    3.3550    1.8355    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.7840    1.0104    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.0695    0.5979    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.0695    2.2479    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.7840    1.8354    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.0694   -0.2271    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0\n    1.9261    1.8355    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.9319   -1.4644    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    0.4971   -1.4645    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n    1.2115   -1.8770    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.9260   -1.4645    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n    1.2115   -2.7020    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n    1.9260   -3.1145    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    2.6404   -2.7020    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    2.6405   -1.8770    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.3549   -3.1145    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n    4.0694   -2.7021    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.0694   -1.8771    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.3549   -1.4645    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.3550   -0.6395    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.9259   -3.9395    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.1055   -3.2007    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0\n  2  3  1  0\n  3  4  2  0\n  5  6  1  0\n  3  5  1  0\n  7  8  1  0\n  8  9  1  0\n  9 10  1  0\n  5  7  1  0\n  6 10  1  0\n 11 12  1  0\n 12 13  1  0\n  9 11  1  0\n 14 15  1  0\n 15 16  2  0\n 16 17  1  0\n 12 14  2  0\n 13 17  2  0\n 19 20  1  0\n 18 20  1  0\n 18 16  1  0\n 21 22  1  0\n 23 24  1  0\n 21 24  2  0\n 22 18  2  0\n 20 23  2  0\n 26 17  1  0\n 25 22  1  0\n  8 27  1  1\n 28 11  2  0\n 29 30  1  0\n 30 14  1  0\n 28 29  1  0\n 32 33  1  0\n 33 34  1  0\n 29 31  2  0\n 30 34  1  0\n 35 36  1  0\n 36 37  2  0\n 37 38  1  0\n 33 35  2  0\n 34 38  2  0\n 38 39  1  0\n 32 40  1  0\n 32 41  1  0\nM  END\n> <chembl_id>\nCHEMBL4535757\n\n> <chembl_pref_name>\nSOTORASIB",
+   "standard_inchi": "InChI=1S/C30H30F2N6O3/c1-6-23(40)36-12-13-37(18(5)15-36)28-19-14-21(32)26(24-20(31)8-7-9-22(24)39)34-29(19)38(30(41)35-28)27-17(4)10-11-33-25(27)16(2)3/h6-11,14,16,18,39H,1,12-13,15H2,2-5H3/t18-/m0/s1",
+   "standard_inchi_key": "NXQKSXLFSAEQCZ-SFHVURJKSA-N"
+  },
+  "molecule_synonyms": [
+   {
+    "molecule_synonym": "AMG-510",
+    "syn_type": "PND",
+    "synonyms": "AMG-510"
+   },
+   {
+    "molecule_synonym": "AMG-510",
+    "syn_type": "RESEARCH_CODE",
+    "synonyms": "AMG-510"
+   },
+   {
+    "molecule_synonym": "AMG510",
+    "syn_type": "PND",
+    "synonyms": "AMG510"
+   },
+   {
+    "molecule_synonym": "AMG510",
+    "syn_type": "RESEARCH_CODE",
+    "synonyms": "AMG510"
+   },
+   {
+    "molecule_synonym": "CT-AMG510AMG-510AMG510",
+    "syn_type": "PND",
+    "synonyms": "CT-AMG510AMG-510AMG510"
+   },
+   {
+    "molecule_synonym": "KRAS G12C INHIBITOR 9",
+    "syn_type": "PND",
+    "synonyms": "Kras g12c inhibitor 9"
+   },
+   {
+    "molecule_synonym": "Kras g12c inhibitor 9",
+    "syn_type": "OTHER",
+    "synonyms": "KRAS G12C INHIBITOR 9"
+   },
+   {
+    "molecule_synonym": "KRAS MUTANT-TARGETING AMG 510",
+    "syn_type": "PND",
+    "synonyms": "Kras mutant-targeting amg 510"
+   },
+   {
+    "molecule_synonym": "Kras mutant-targeting amg 510",
+    "syn_type": "OTHER",
+    "synonyms": "KRAS MUTANT-TARGETING AMG 510"
+   },
+   {
+    "molecule_synonym": "LUMAKRAS",
+    "syn_type": "PND",
+    "synonyms": "Lumakras"
+   },
+   {
+    "molecule_synonym": "Lumakras",
+    "syn_type": "TRADE_NAME",
+    "synonyms": "LUMAKRAS"
+   },
+   {
+    "molecule_synonym": "LUMYKRAS",
+    "syn_type": "PND",
+    "synonyms": "Lumykras"
+   },
+   {
+    "molecule_synonym": "Lumykras",
+    "syn_type": "TRADE_NAME",
+    "synonyms": "LUMYKRAS"
+   },
+   {
+    "molecule_synonym": "(R)-38",
+    "syn_type": "PND",
+    "synonyms": "(R)-38"
+   },
+   {
+    "molecule_synonym": "(S)-AMG-510",
+    "syn_type": "PND",
+    "synonyms": "(S)-AMG-510"
+   },
+   {
+    "molecule_synonym": "SOTORASIB",
+    "syn_type": "PND",
+    "synonyms": "sotorasib"
+   },
+   {
+    "molecule_synonym": "Sotorasib",
+    "syn_type": "ATC",
+    "synonyms": "SOTORASIB"
+   },
+   {
+    "molecule_synonym": "Sotorasib",
+    "syn_type": "EMA",
+    "synonyms": "SOTORASIB"
+   },
+   {
+    "molecule_synonym": "Sotorasib",
+    "syn_type": "FDA",
+    "synonyms": "SOTORASIB"
+   },
+   {
+    "molecule_synonym": "Sotorasib",
+    "syn_type": "INN",
+    "synonyms": "SOTORASIB"
+   },
+   {
+    "molecule_synonym": "Sotorasib",
+    "syn_type": "OTHER",
+    "synonyms": "SOTORASIB"
+   },
+   {
+    "molecule_synonym": "Sotorasib",
+    "syn_type": "USAN",
+    "synonyms": "SOTORASIB"
+   },
+   {
+    "molecule_synonym": "SOTORASIB (AMG510) RACEMATE",
+    "syn_type": "PND",
+    "synonyms": "Sotorasib (AMG510) racemate"
+   }
+  ],
+  "molecule_type": "Small molecule",
+  "natural_product": 0,
+  "oral": true,
+  "orphan": 0,
+  "parenteral": false,
+  "polymer_flag": 0,
+  "pref_name": "SOTORASIB",
+  "prodrug": 0,
+  "structure_type": "MOL",
+  "therapeutic_flag": true,
+  "topical": false,
+  "usan_stem": "-rasib",
+  "usan_stem_definition": "Kirsten rat sarcoma (KRAS) inhibitors",
+  "usan_substem": "-rasib",
+  "usan_year": 2021,
+  "veterinary": 0,
+  "withdrawn_flag": false
+ }
+}

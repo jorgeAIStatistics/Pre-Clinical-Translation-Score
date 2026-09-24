@@ -1,0 +1,1007 @@
+"""API integration tests: the HTTP contract, end to end, offline.
+
+These exercise the real FastAPI application against a real (in-memory) database
+seeded with the demonstration generator and a real, if small, trained model
+artifact. Nothing is mocked below the HTTP boundary, because the failures worth
+catching here — a filter that silently ignores its argument, an as-of cutoff
+that leaks future evidence into a score, an explanation that does not add up to
+the number shown beside it — all live in the wiring between layers rather than
+inside any one of them.
+
+Why this module builds its own database instead of using ``seeded_session``
+--------------------------------------------------------------------------
+``seeded_session`` is function-scoped, and the scoring endpoints need an active
+model artifact. Training once per test would dominate the runtime of the suite,
+so the whole environment (schema, seed, cohort, model, client) is built once at
+session scope. The helpers used are the same ones ``conftest`` uses.
+
+Why the seed is larger than the 60 programs ``seeded_session`` uses
+------------------------------------------------------------------
+Training is not a formality here: the model-selection gate in
+``trs.pipeline.select`` rejects a candidate whose held-out calibration slope is
+outside the sanity band. At 60 programs the temporal split leaves ~14 test rows,
+the recalibrator separates, the slope explodes, and training fails by design.
+``N_SEED_PROGRAMS`` is the smallest round size observed to produce a model that
+clears the gate, which keeps the scoring tests honest — they run against a model
+that passed the same gate production models pass.
+
+Offline
+-------
+No test here touches the network. Connectors are never invoked; the model is
+trained from seeded rows; artifacts are written to a temporary directory.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import math
+from dataclasses import dataclass, field
+from typing import Any
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
+
+#: Programs to seed. See the module docstring for why this is not 60.
+N_SEED_PROGRAMS = 150
+
+#: The four verdicts ``trs.pipeline.train._usefulness_verdict`` can return.
+#: A fifth value appearing here means an unreviewed claim about the model's
+#: skill is reaching the Methods page.
+USEFULNESS_VERDICTS = frozenset({
+    "beats_base_rate",
+    "worse_than_base_rate",
+    "not_distinguishable_from_base_rate",
+    "indeterminate",
+})
+
+#: Response keys whose value must be a probability. Signed quantities are
+#: deliberately absent: ``probability_delta``, ``delta_probability``,
+#: ``contribution`` and the logits may all legitimately be negative.
+PROBABILITY_KEYS = frozenset({
+    "probability",
+    "baseline_probability",
+    "interval_low",
+    "interval_high",
+    "interval_level",
+    "interval_width",
+    "coverage",
+    "overall",
+    "prevalence",
+    "completeness_score",
+    "variance_share",
+})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Environment
+# ─────────────────────────────────────────────────────────────────────────────
+
+@dataclass(slots=True)
+class ApiEnv:
+    """The wired-up application under test, plus what was put in the database."""
+
+    client: TestClient
+    session: Session
+    tracks: list[dict[str, Any]] = field(default_factory=list)
+    model_version: str | None = None
+    model_error: str | None = None
+
+
+@pytest.fixture(scope="session")
+def api_env(tmp_path_factory) -> ApiEnv:
+    """The application, bound to a seeded in-memory database with a live model.
+
+    The engine uses ``StaticPool`` because ``TestClient`` runs the ASGI app on a
+    worker thread: with the default SQLite pooling that thread would open its
+    own connection and find an empty database.
+
+    Two process-global objects are redirected for the duration of the session
+    and restored afterwards:
+
+    * ``trs.db.session``'s engine and session factory, because the health
+      endpoint opens its own ``session_scope()`` rather than taking the request
+      session, and would otherwise report on the developer's real database;
+    * ``trs.api.security.limiter``, because the production token bucket has a
+      burst of 40 and this module issues more requests than that. Rate limiting
+      is a real behaviour and is not exercised here; it is disabled explicitly
+      rather than left to make the suite fail on request number 41.
+    """
+    import trs.api.security as security
+    import trs.db.models  # noqa: F401  (registers the mappers)
+    import trs.db.session as db_session_module
+    from trs.api.deps import get_db
+    from trs.api.main import app
+    from trs.config import settings
+    from trs.db.base import Base
+    from trs.pipeline.artifacts import clear_bundle_cache
+
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        future=True,
+    )
+    Base.metadata.create_all(engine)
+    factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False, future=True)
+    session = factory()
+
+    saved = (
+        db_session_module._engine,
+        db_session_module._SessionFactory,
+        settings.artifact_dir,
+        security.limiter,
+    )
+    db_session_module._engine = engine
+    db_session_module._SessionFactory = factory
+    settings.artifact_dir = tmp_path_factory.mktemp("artifacts")
+    security.limiter = security.TokenBucketLimiter(rate_per_minute=10**6, burst=10**6)
+    clear_bundle_cache()
+
+    env = ApiEnv(client=None, session=session)  # type: ignore[arg-type]
+    try:
+        from trs.seed.generator import DemoDataGenerator
+
+        DemoDataGenerator(session, seed=4242).run(n_programs=N_SEED_PROGRAMS)
+        session.commit()
+
+        try:
+            from trs.cohort.build import build_cohort
+            from trs.pipeline.train import train
+
+            cohort = build_cohort(session).cohort_version
+            session.commit()
+            bundle = train(
+                session,
+                cohort_version_id=cohort.id,
+                candidate_families=("l2_logistic",),
+                n_bootstrap=0,
+                run_interval_check=False,
+                run_ablation=False,
+                register_candidates=False,
+                make_active=True,
+                verbose=False,
+            )
+            session.commit()
+            env.model_version = bundle.version
+        except Exception as exc:  # noqa: BLE001 - reported as a skip reason below
+            session.rollback()
+            env.model_error = f"{type(exc).__name__}: {exc}"
+
+        def _override_get_db():
+            try:
+                yield session
+                session.commit()
+            except Exception:
+                session.rollback()
+                raise
+
+        app.dependency_overrides[get_db] = _override_get_db
+        with TestClient(app) as client:
+            env.client = client
+            response = client.get("/api/v1/programs", params={"limit": 500})
+            assert response.status_code == 200, response.text
+            env.tracks = response.json()
+            yield env
+    finally:
+        app.dependency_overrides.clear()
+        clear_bundle_cache()
+        session.close()
+        engine.dispose()
+        (
+            db_session_module._engine,
+            db_session_module._SessionFactory,
+            settings.artifact_dir,
+            security.limiter,
+        ) = saved
+
+
+@pytest.fixture(scope="session")
+def client(api_env: ApiEnv) -> TestClient:
+    return api_env.client
+
+
+@pytest.fixture(scope="session")
+def any_track(api_env: ApiEnv) -> dict[str, Any]:
+    """A track with an IND date and evidence attached — the normal case."""
+    for row in api_env.tracks:
+        if row["ind_or_cta_on"] and row["n_evidence_items"] > 0:
+            return row
+    pytest.fail("The seeded dataset contains no track with both an IND date and evidence.")
+
+
+@pytest.fixture(scope="session")
+def scorable_track(api_env: ApiEnv, any_track: dict[str, Any]) -> dict[str, Any]:
+    """The track the scoring tests use; skips the lot if no model was trained."""
+    if api_env.model_version is None:
+        pytest.skip(
+            "No active model artifact could be trained for this module, so the "
+            f"scoring endpoints cannot be exercised. Training failed with: "
+            f"{api_env.model_error}"
+        )
+    return any_track
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def collect_probability_fields(node: Any, path: str = "$") -> list[tuple[str, float]]:
+    """Every probability-valued leaf in a decoded JSON payload, with its path.
+
+    Recursive because the score payload nests probabilities four levels deep
+    (``scenario.current.uncertainty.variance_share.parameter``), and a check
+    that only looked at the top level would pass while the interface displayed
+    a nonsense number from inside ``explanation`` or ``uncertainty``.
+    """
+    found: list[tuple[str, float]] = []
+    if isinstance(node, dict):
+        for key, value in node.items():
+            child = f"{path}.{key}"
+            if (
+                key in PROBABILITY_KEYS
+                and isinstance(value, (int, float))
+                and not isinstance(value, bool)
+            ):
+                found.append((child, float(value)))
+            elif key == "variance_share" and isinstance(value, dict):
+                found.extend(
+                    (f"{child}.{k}", float(v))
+                    for k, v in value.items()
+                    if isinstance(v, (int, float)) and not isinstance(v, bool)
+                )
+            found.extend(collect_probability_fields(value, child))
+    elif isinstance(node, list):
+        for index, item in enumerate(node):
+            found.extend(collect_probability_fields(item, f"{path}[{index}]"))
+    return found
+
+
+def assert_probabilities_bounded(payload: Any, *, minimum_checked: int) -> None:
+    """Assert every probability-valued field is a finite number in [0, 1].
+
+    ``minimum_checked`` guards the guard: if a rename made the walk find
+    nothing, this helper would otherwise pass silently for ever.
+    """
+    fields = collect_probability_fields(payload)
+    assert len(fields) >= minimum_checked, (
+        f"Only {len(fields)} probability-valued fields were found, expected at "
+        f"least {minimum_checked}. Either the payload shrank or the walk is "
+        f"looking for the wrong keys. Found: {[p for p, _ in fields]}"
+    )
+    for path, value in fields:
+        assert math.isfinite(value), f"{path} = {value} is not a finite number"
+        assert 0.0 <= value <= 1.0, f"{path} = {value} is outside [0, 1]"
+
+
+def sigmoid(x: float) -> float:
+    return 1.0 / (1.0 + math.exp(-x))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. Health
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_health_reports_deployment_posture(client: TestClient, api_env: ApiEnv) -> None:
+    """If this breaks, a deployment cannot tell you what it is.
+
+    ``is_demonstration_deployment`` and ``development_auth_fallback`` are the
+    two facts that distinguish a demonstration instance with authentication
+    effectively disabled from a real one. Both must be reported, and reported
+    truthfully: a demo instance that answers ``false`` here is indistinguishable
+    from production to anyone reading its output.
+    """
+    from trs import __version__
+    from trs.features.spec import FEATURE_SCHEMA_VERSION
+
+    response = client.get("/api/v1/health")
+    assert response.status_code == 200
+    body = response.json()
+
+    assert set(body) == {
+        "status", "version", "environment", "database", "active_model",
+        "feature_schema_version", "is_demonstration_deployment",
+        "development_auth_fallback",
+    }
+    assert body["status"] == "ok"
+    assert body["database"] == "ok"
+    assert body["version"] == __version__
+    assert body["environment"] == "test"
+    assert body["feature_schema_version"] == FEATURE_SCHEMA_VERSION
+
+    # TRS_ENV=test keeps the unauthenticated fallback reachable; saying so is
+    # the entire point of the flag.
+    assert body["development_auth_fallback"] is True
+
+    if api_env.model_version is None:
+        assert body["active_model"] is None
+        assert body["is_demonstration_deployment"] is False
+    else:
+        assert body["active_model"] == api_env.model_version
+        # The active model was trained on generator output, so the deployment
+        # must declare itself a demonstration.
+        assert body["is_demonstration_deployment"] is True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. Program listing and filters
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_programs_list_returns_tracks(client: TestClient, api_env: ApiEnv) -> None:
+    """If this breaks, the portfolio screen is empty or shows malformed rows.
+
+    The list is the entry point to everything else: an id that does not round
+    trip to a detail page, or a missing indication, breaks every downstream
+    view.
+    """
+    rows = api_env.tracks
+    assert isinstance(rows, list)
+    assert len(rows) >= N_SEED_PROGRAMS, (
+        f"{N_SEED_PROGRAMS} programs were seeded but only {len(rows)} tracks "
+        "came back; tracks are program × indication, so there should be at "
+        "least one per program."
+    )
+    assert len({r["id"] for r in rows}) == len(rows), "duplicate track ids in the listing"
+
+    for row in rows[:20]:
+        assert row["indication"]["name"]
+        assert row["modality"]
+        assert row["outcome_label"]
+        assert row["n_evidence_items"] >= 0
+        # Everything in this dataset is generated; a row that claims otherwise
+        # would be presented to users as real evidence.
+        assert row["is_synthetic"] is True
+
+
+def test_programs_pagination(client: TestClient, api_env: ApiEnv) -> None:
+    """If this breaks, the portfolio table either truncates or repeats rows.
+
+    ``limit``/``offset`` are the only way the UI walks a portfolio larger than
+    one page; an ignored ``offset`` shows page one for ever.
+    """
+    first = client.get("/api/v1/programs", params={"limit": 5}).json()
+    assert len(first) == 5
+
+    second = client.get("/api/v1/programs", params={"limit": 5, "offset": 5}).json()
+    assert len(second) == 5
+    assert {r["id"] for r in first}.isdisjoint({r["id"] for r in second})
+    assert [r["id"] for r in first + second] == [r["id"] for r in api_env.tracks[:10]]
+
+    over_limit = client.get("/api/v1/programs", params={"limit": 501})
+    assert over_limit.status_code == 422, "the documented limit ceiling is not enforced"
+
+
+def test_programs_filter_by_target(client: TestClient, api_env: ApiEnv) -> None:
+    """If this breaks, a target filter shows programs against other targets.
+
+    This is a soundness *and* completeness check: the filtered set must be
+    exactly the rows the unfiltered listing attributes to that symbol. A join
+    that drops rows is as wrong as one that admits foreign ones.
+    """
+    symbol = next(r["target"]["symbol"] for r in api_env.tracks if r["target"])
+    expected = {r["id"] for r in api_env.tracks if r["target"] and r["target"]["symbol"] == symbol}
+
+    rows = client.get("/api/v1/programs", params={"target": symbol, "limit": 500}).json()
+    assert {r["id"] for r in rows} == expected
+    assert expected, "no track carries a target symbol, so the filter is untested"
+    assert len(expected) < len(api_env.tracks), "the filter narrowed nothing"
+    assert all(r["target"]["symbol"] == symbol for r in rows)
+
+    # Symbol matching is case-insensitive on the API surface.
+    lowered = client.get(
+        "/api/v1/programs", params={"target": symbol.lower(), "limit": 500}
+    ).json()
+    assert {r["id"] for r in lowered} == expected
+
+    assert client.get("/api/v1/programs", params={"target": "NOT_A_GENE"}).json() == []
+
+
+def test_programs_filter_by_modality(client: TestClient, api_env: ApiEnv) -> None:
+    """If this breaks, a modality filter returns the wrong therapeutic class.
+
+    Modality drives which comparators and which historical base rates a user
+    reads the score against; a filter that silently ignores it puts a cell
+    therapy in an oligonucleotide list.
+    """
+    modality = api_env.tracks[0]["modality"]
+    expected = {r["id"] for r in api_env.tracks if r["modality"] == modality}
+
+    rows = client.get("/api/v1/programs", params={"modality": modality, "limit": 500}).json()
+    assert {r["id"] for r in rows} == expected
+    assert 0 < len(expected) < len(api_env.tracks)
+    assert all(r["modality"] == modality for r in rows)
+
+    assert client.get("/api/v1/programs", params={"modality": "not_a_modality"}).json() == []
+
+
+def test_programs_free_text_filter(client: TestClient, api_env: ApiEnv) -> None:
+    """If this breaks, search either returns everything or nothing.
+
+    A search box that silently ignores its query is worse than no search box:
+    the user believes they are looking at a filtered list.
+    """
+    name = api_env.tracks[0]["program_name"]
+    expected = {r["id"] for r in api_env.tracks if name.lower() in r["program_name"].lower()}
+
+    rows = client.get("/api/v1/programs", params={"q": name, "limit": 500}).json()
+    assert {r["id"] for r in rows} == expected
+    assert 0 < len(rows) < len(api_env.tracks)
+
+    # Matching is case-insensitive on both sides of the comparison.
+    lowered = client.get("/api/v1/programs", params={"q": name.lower(), "limit": 500}).json()
+    assert {r["id"] for r in lowered} == expected
+
+    assert client.get("/api/v1/programs", params={"q": "zzz-no-such-program"}).json() == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. Program detail
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_program_detail_round_trips(client: TestClient, any_track: dict[str, Any]) -> None:
+    """If this breaks, clicking a portfolio row opens the wrong program.
+
+    The detail payload must extend the summary rather than restate it
+    differently: the UI renders both from the same fields.
+    """
+    response = client.get(f"/api/v1/programs/{any_track['id']}")
+    assert response.status_code == 200
+    detail = response.json()
+
+    assert detail["id"] == any_track["id"]
+    assert detail["program_name"] == any_track["program_name"]
+    assert detail["indication"]["name"] == any_track["indication"]["name"]
+    assert detail["n_evidence_items"] == any_track["n_evidence_items"]
+
+    # Sibling tracks: the same asset in other indications. Exactly one of them
+    # is this one, and every one belongs to the same program.
+    assert detail["all_tracks"], "detail payload lists no tracks at all"
+    assert sum(1 for t in detail["all_tracks"] if t["is_current"]) == 1
+    assert any(t["track_id"] == any_track["id"] for t in detail["all_tracks"])
+
+
+def test_program_detail_unknown_id_is_404(client: TestClient) -> None:
+    """If this breaks, a stale link renders an error page or, worse, a 200.
+
+    A bogus identifier must be a clean 404, not a 500 from an unguarded
+    ``None`` and not an empty success.
+    """
+    response = client.get("/api/v1/programs/01NOT-A-REAL-TRACK-ID")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Program not found."
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. Evidence and the as-of cutoff
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_evidence_respects_the_as_of_cutoff(
+    client: TestClient, any_track: dict[str, Any]
+) -> None:
+    """If this breaks, every score the platform reports is invalid.
+
+    The evidence list is what a user checks the score against. If it shows an
+    item published after the decision date, either the score used it — and the
+    model's validation statistics are contaminated by hindsight — or the
+    interface is lying about which evidence the score rests on. Both are fatal
+    to the product's central claim.
+    """
+    track_id = any_track["id"]
+    cutoff = dt.date.fromisoformat(any_track["ind_or_cta_on"])
+
+    default = client.get(f"/api/v1/programs/{track_id}/evidence").json()
+    assert default, "the chosen track reports evidence items but returns none"
+    for item in default:
+        assert dt.date.fromisoformat(item["available_at"]) <= cutoff, (
+            f"evidence {item['id']} became available {item['available_at']}, "
+            f"after the {cutoff.isoformat()} cutoff, yet is shown as evidence "
+            "available at the decision point"
+        )
+
+    # An explicit earlier cutoff can only shrink the set, and never admits an
+    # item dated after it.
+    earlier = cutoff - dt.timedelta(days=365 * 3)
+    narrowed = client.get(
+        f"/api/v1/programs/{track_id}/evidence", params={"as_of": earlier.isoformat()}
+    ).json()
+    assert {i["id"] for i in narrowed} <= {i["id"] for i in default}
+    assert all(dt.date.fromisoformat(i["available_at"]) <= earlier for i in narrowed)
+
+
+def test_include_post_cutoff_only_ever_adds(client: TestClient, api_env: ApiEnv) -> None:
+    """If this breaks, the context view hides evidence or silently scores it.
+
+    ``include_post_cutoff`` exists so a reader can see what was learned after
+    the decision point without that evidence entering the score. It must be a
+    strict superset of the scoring view — an item that appears only in the
+    default view would mean the two paths disagree about what exists.
+    """
+    grew_for_at_least_one = False
+    checked = 0
+
+    for row in api_env.tracks[:20]:
+        if not row["ind_or_cta_on"]:
+            continue
+        checked += 1
+        track_id = row["id"]
+        cutoff = dt.date.fromisoformat(row["ind_or_cta_on"])
+        default = client.get(f"/api/v1/programs/{track_id}/evidence").json()
+        everything = client.get(
+            f"/api/v1/programs/{track_id}/evidence", params={"include_post_cutoff": True}
+        ).json()
+
+        assert {i["id"] for i in default} <= {i["id"] for i in everything}
+        assert len(everything) >= len(default)
+        if len(everything) > len(default):
+            grew_for_at_least_one = True
+            later = [
+                i for i in everything
+                if dt.date.fromisoformat(i["available_at"]) > cutoff
+            ]
+            assert later, (
+                "the post-cutoff view returned extra items, none of which "
+                "postdate the cutoff — the two queries disagree for some other "
+                "reason"
+            )
+
+    assert checked >= 5, "too few tracks with an IND date to test the cutoff"
+    assert grew_for_at_least_one, (
+        "no track gained an item when post-cutoff evidence was requested, so "
+        "this test proved nothing; the seeded data no longer contains evidence "
+        "dated after any IND date"
+    )
+
+
+def test_evidence_matrix_is_internally_consistent(
+    client: TestClient, any_track: dict[str, Any]
+) -> None:
+    """If this breaks, the evidence-gap view misreports what is missing.
+
+    The matrix exists to show negative space — an empty human-derived row is
+    the finding. Coverage outside [0, 1], or a cell pointing at an evidence id
+    that is not in the track's evidence at that cutoff, means the gaps shown are
+    not the real gaps.
+    """
+    track_id = any_track["id"]
+    matrix = client.get(f"/api/v1/programs/{track_id}/evidence-matrix").json()
+
+    assert 0.0 <= matrix["coverage"] <= 1.0
+    total_cells = len(matrix["rows"]) * len(matrix["columns"])
+    assert total_cells > 0
+    occupied = {(c["evidence_class"], c["system"]) for c in matrix["cells"]}
+    assert matrix["empty_cells"] == total_cells - len(occupied)
+    assert matrix["coverage"] == pytest.approx(len(occupied) / total_cells, abs=5e-5)
+
+    available = client.get(f"/api/v1/programs/{track_id}/evidence").json()
+    available_ids = {i["id"] for i in available}
+    assert matrix["n_evidence"] == len(available_ids)
+
+    cell_ids: list[str] = []
+    for cell in matrix["cells"]:
+        assert cell["n_total"] == len(cell["evidence_ids"])
+        assert cell["n_supporting"] + cell["n_refuting"] <= cell["n_total"]
+        cell_ids.extend(cell["evidence_ids"])
+
+    assert len(cell_ids) == len(set(cell_ids)), "an evidence item appears in two cells"
+    assert set(cell_ids) <= available_ids, (
+        "the matrix references evidence ids that are not in the track's "
+        "evidence at this cutoff"
+    )
+    assert len(cell_ids) == matrix["n_evidence"], "the matrix drops evidence items"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 6. Scoring
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.fixture(scope="session")
+def score(client: TestClient, scorable_track: dict[str, Any]) -> dict[str, Any]:
+    response = client.post(f"/api/v1/programs/{scorable_track['id']}/score", json={})
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def test_score_returns_an_ordered_interval(
+    score: dict[str, Any], api_env: ApiEnv, scorable_track: dict[str, Any]
+) -> None:
+    """If this breaks, the product ships a probability nobody can act on.
+
+    The central promise is that no estimate is returned bare. An interval whose
+    bounds are crossed, or that excludes its own point estimate, is worse than
+    no interval: it looks authoritative and is arithmetically impossible.
+    """
+    assert score["track_id"] == scorable_track["id"]
+    assert score["model_version"] == api_env.model_version
+    assert score["model_family"] == "l2_logistic"
+    assert score["endpoint"] == "ph2_efficacy_failure"
+    assert score["estimand"], "the estimand must travel with the estimate"
+
+    assert 0.0 <= score["interval_low"] <= score["probability"] <= score["interval_high"] <= 1.0
+    assert score["interval_level"] == pytest.approx(0.95)
+    assert score["uncertainty"]["probability"] == pytest.approx(score["probability"])
+    assert score["uncertainty"]["interval_low"] == pytest.approx(score["interval_low"])
+    assert score["uncertainty"]["interval_high"] == pytest.approx(score["interval_high"])
+    assert score["uncertainty"]["interval_width"] == pytest.approx(
+        score["interval_high"] - score["interval_low"]
+    )
+
+    # The interval's width is decomposed, and the shares are a decomposition:
+    # they account for all of it and name the largest contributor.
+    shares = score["uncertainty"]["variance_share"]
+    assert shares, "the interval is reported without saying where its width comes from"
+    assert sum(shares.values()) == pytest.approx(1.0, abs=1e-6)
+    assert score["uncertainty"]["dominant_source"] in shares
+    assert shares[score["uncertainty"]["dominant_source"]] == pytest.approx(max(shares.values()))
+
+
+def test_score_is_as_of_the_decision_date(
+    score: dict[str, Any], scorable_track: dict[str, Any], client: TestClient
+) -> None:
+    """If this breaks, the score answers a different question than it claims.
+
+    The default cutoff is the IND/CTA date — the decision the product exists to
+    support. Falling back to today's date would quietly turn a prospective
+    estimate into a retrospective one computed with hindsight.
+    """
+    assert score["as_of_date"] == scorable_track["ind_or_cta_on"]
+
+    at_cutoff = client.get(f"/api/v1/programs/{scorable_track['id']}/evidence").json()
+    assert score["n_evidence_items"] == len(at_cutoff), (
+        "the score counts a different number of evidence items than the "
+        "evidence endpoint shows for the same cutoff"
+    )
+
+
+def test_score_explanation_reconstructs_the_logit(score: dict[str, Any]) -> None:
+    """If this breaks, the displayed drivers do not explain the displayed number.
+
+    The product's explanation claim is exactness: contributions are terms in the
+    model's own linear predictor, not a post-hoc approximation. If the domain
+    roll-up plus the baseline plus the residual does not equal the total logit,
+    the driver list is decoration and the interface is misattributing risk.
+    """
+    explanation = score["explanation"]
+    assert explanation is not None, score.get("explanation_unavailable_reason")
+    assert explanation["method"].startswith("exact_additive_logodds")
+    assert explanation["reconstruction_error"] == pytest.approx(0.0, abs=1e-8)
+
+    # by_domain covers every driver; increasing_risk/decreasing_risk are the
+    # top-k slices shown in the UI and need not be exhaustive.
+    domain_total = sum(d["contribution"] for d in explanation["by_domain"])
+    reconstructed = (
+        explanation["baseline_logit"]
+        + domain_total
+        + explanation["other_factors_contribution"]
+    )
+    assert reconstructed == pytest.approx(explanation["total_logit"], abs=1e-8)
+    assert sigmoid(explanation["total_logit"]) == pytest.approx(
+        explanation["probability"], abs=1e-9
+    )
+    assert sigmoid(explanation["baseline_logit"]) == pytest.approx(
+        explanation["baseline_probability"], abs=1e-9
+    )
+
+    assert all(d["contribution"] > 0 for d in explanation["increasing_risk"])
+    assert all(d["contribution"] < 0 for d in explanation["decreasing_risk"])
+    for bucket in ("increasing_risk", "decreasing_risk"):
+        magnitudes = [abs(d["contribution"]) for d in score["explanation"][bucket]]
+        assert magnitudes == sorted(magnitudes, reverse=True), (
+            f"{bucket} is not ordered by magnitude, so the UI's 'top drivers' "
+            "are not the top drivers"
+        )
+    for driver in explanation["increasing_risk"] + explanation["decreasing_risk"]:
+        assert driver["direction"] == (
+            "increases_risk" if driver["contribution"] > 0 else "decreases_risk"
+        )
+        assert driver["domain"] and driver["label"]
+        if driver["is_missing"]:
+            assert driver["value"] is None
+
+
+def test_score_declares_its_demonstration_status(score: dict[str, Any]) -> None:
+    """If this breaks, simulated output can be mistaken for a real estimate.
+
+    Every number in this deployment derives from generated data and a model
+    trained on it. The response must say so, and the evidence-confidence grade
+    must be pinned to its lowest level — an interface showing 'moderate
+    confidence' beside a synthetic estimate is the single most dangerous state
+    this product can reach.
+    """
+    assert score["is_demonstration"] is True
+    assert score["demonstration_note"]
+    assert "DEMONSTRATION" in score["demonstration_note"]
+    assert score["evidence_confidence"] == "very_low"
+    assert score["confidence_reasons"], "a confidence grade with no stated reasons"
+    assert any("synthetic" in reason.lower() for reason in score["confidence_reasons"])
+
+    # The model's own verdict on whether it beats the base rate travels with
+    # every estimate, not only with the Methods page.
+    assert score["model_usefulness"].get("verdict") in USEFULNESS_VERDICTS
+
+
+def test_score_completeness_is_a_real_assessment(score: dict[str, Any]) -> None:
+    """If this breaks, the evidence-gap readout beside the score is fabricated.
+
+    Completeness is what stops a confident-looking number resting on three
+    features. The counts must agree with the declared feature schema.
+    """
+    from trs.features.registry import FEATURES
+
+    completeness = score["completeness"]
+    assert 0.0 <= completeness["overall"] <= 1.0
+    assert completeness["n_total"] == len(FEATURES) == 63
+    assert 0 <= completeness["n_present"] <= completeness["n_total"]
+    assert all(0.0 <= v <= 1.0 for v in completeness["by_domain"].values())
+
+
+def test_score_unknown_track_is_rejected(client: TestClient, scorable_track) -> None:
+    """If this breaks, a bad id yields a 500 and a stack trace in the logs.
+
+    A scoring request for something that does not exist is a client error with
+    a readable message, not an unhandled exception.
+
+    ``scorable_track`` is unused except to skip this test when no model exists:
+    without an artifact the endpoint fails before it ever looks at the id.
+    """
+    response = client.post("/api/v1/programs/01NOT-A-REAL-TRACK-ID/score", json={})
+    assert response.status_code == 400
+    assert "01NOT-A-REAL-TRACK-ID" in response.json()["detail"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 7 & 8. Scenarios
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_scenario_returns_both_sides_of_the_comparison(
+    client: TestClient, scorable_track: dict[str, Any]
+) -> None:
+    """If this breaks, the scenario view shows a number with nothing to compare.
+
+    A scenario is only interpretable as a difference: current state,
+    hypothetical state, and exactly what was changed between them. Without the
+    change list a user cannot tell what they were shown the effect of.
+    """
+    response = client.post(
+        f"/api/v1/programs/{scorable_track['id']}/scenarios",
+        json={"lever_keys": ["independent_replication"]},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    current, scenario = body["current"], body["scenario"]
+    assert current["track_id"] == scenario["track_id"] == scorable_track["id"]
+    assert current["as_of_date"] == scenario["as_of_date"]
+    assert current["scenario"] is None
+    assert scenario["scenario"]["lever_keys"] == ["independent_replication"]
+
+    assert body["changes"], (
+        "applying a lever changed nothing at all, so the comparison is empty"
+    )
+    changed = {c["feature"] for c in body["changes"]}
+    assert changed <= set(scenario["scenario"]["overrides"])
+    for change in body["changes"]:
+        assert change["from_value"] != change["to_value"]
+        assert change["label"] and change["domain_label"]
+
+    assert body["delta_probability"] == pytest.approx(
+        scenario["probability"] - current["probability"], abs=1e-12
+    )
+    assert body["delta_interval_width"] == pytest.approx(
+        (scenario["interval_high"] - scenario["interval_low"])
+        - (current["interval_high"] - current["interval_low"]),
+        abs=1e-12,
+    )
+    # The scenario must state what it is not. This wording is the guard against
+    # reading a sensitivity analysis as a forecast.
+    assert "not predict" in body["disclaimer"] or "does not predict" in body["disclaimer"]
+
+
+def test_scenario_levers_cannot_make_a_program_look_worse(
+    client: TestClient, scorable_track: dict[str, Any]
+) -> None:
+    """If this breaks, commissioning good work appears to raise a program's risk.
+
+    An improvement lever is clamped so it can only move a feature in the
+    risk-reducing direction. Without the clamp, applying 'add an independent
+    replication' to an already well-replicated program lowers its replication
+    score — and the scenario reads as 'doing this study would make it worse',
+    which is nonsense a team could act on.
+    """
+    response = client.post(
+        f"/api/v1/programs/{scorable_track['id']}/scenarios",
+        json={"lever_keys": ["independent_replication", "multi_lab_replication"]},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    for change in body["changes"]:
+        if change["feature"] == "single_lab_dependence":
+            # Lower is better for this one.
+            assert change["to_value"] <= (change["from_value"] or 1.0)
+        if change["feature"] in {"replication_scope_ord", "n_independent_labs"}:
+            assert change["from_value"] is None or change["to_value"] >= change["from_value"]
+
+
+def test_scenario_rejects_overrides_it_must_not_allow(
+    client: TestClient, scorable_track: dict[str, Any]
+) -> None:
+    """If this breaks, users can fabricate a low-risk program.
+
+    Three separate gates, each of which has to hold: unknown features, features
+    a team cannot change by doing work (historical class performance, disease
+    context), and values outside a feature's declared range. Any of them
+    leaking turns scenario analysis into a way to produce whatever number the
+    user wants.
+    """
+    url = f"/api/v1/programs/{scorable_track['id']}/scenarios"
+
+    unknown_feature = client.post(url, json={"overrides": {"not_a_feature": 1.0}})
+    assert unknown_feature.status_code == 422
+    assert "not_a_feature" in unknown_feature.json()["detail"]
+
+    # Declared in the registry, but deliberately not scenario-adjustable.
+    not_adjustable = client.post(url, json={"overrides": {"animal_median_effect_z": 3.0}})
+    assert not_adjustable.status_code == 422
+    assert "not adjustable" in not_adjustable.json()["detail"]
+
+    # animal_positive_fraction is adjustable but declared on [0, 1].
+    out_of_range = client.post(url, json={"overrides": {"animal_positive_fraction": 1.5}})
+    assert out_of_range.status_code == 422
+    assert "maximum" in out_of_range.json()["detail"]
+
+    unknown_lever = client.post(url, json={"lever_keys": ["no_such_lever"]})
+    assert unknown_lever.status_code == 422
+    assert "no_such_lever" in unknown_lever.json()["detail"]
+
+    nothing_asked = client.post(url, json={})
+    assert nothing_asked.status_code == 422
+
+
+def test_lever_catalogue_states_each_lever_direction(client: TestClient) -> None:
+    """If this breaks, the UI cannot tell good news from bad news.
+
+    ``direction`` is what distinguishes 'a replication succeeded' from 'a
+    contradictory study appeared'. Without it every lever renders as an
+    improvement, and the adverse scenarios — the ones that stop this being a
+    marketing tool — are presented as upside.
+    """
+    body = client.get("/api/v1/scenarios/levers").json()
+    levers = body["levers"]
+    assert levers
+    assert body["note"], "the catalogue is served without its interpretation caveat"
+
+    keys = [lever["key"] for lever in levers]
+    assert len(keys) == len(set(keys))
+
+    for lever in levers:
+        assert lever["direction"] in {"improvement", "adverse", "absolute"}
+        assert lever["label"] and lever["description"] and lever["action"]
+        assert lever["domain"] and lever["domain_label"]
+        assert lever["overrides"], f"lever {lever['key']} changes nothing"
+        assert {a["name"] for a in lever["affected_features"]} <= set(lever["overrides"])
+        for implied in lever["implies"]:
+            assert implied in keys, f"lever {lever['key']} implies a lever that does not exist"
+
+    # A catalogue with no adverse lever would only ever show improvement.
+    assert any(lever["direction"] == "adverse" for lever in levers)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 9 & 10. Model registry, validation report, feature schema
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_validation_report_publishes_the_unflattering_numbers(
+    client: TestClient, api_env: ApiEnv
+) -> None:
+    """If this breaks, the Methods page stops telling users not to trust the model.
+
+    The usefulness verdict is the threshold question — does this beat quoting
+    the base rate? — and the limitations are how a reader learns the data is
+    synthetic. A report that serves a verdict it cannot support, or drops the
+    limitations, converts a documented weak model into an undocumented one.
+    """
+    if api_env.model_version is None:
+        pytest.skip(f"no model artifact: {api_env.model_error}")
+
+    response = client.get("/api/v1/model/validation")
+    assert response.status_code == 200, response.text
+    report = response.json()
+
+    assert report["model_version"] == api_env.model_version
+    assert "Temporal split" in report["evaluation_design"]["split"]
+    assert report["evaluation_design"]["sizes"]["test"] > 0
+    assert report["cohort"]["n_entries"] > 0
+
+    usefulness = report["usefulness"]
+    assert usefulness["verdict"] in USEFULNESS_VERDICTS
+    assert usefulness["headline"]
+    scaled_brier = usefulness["scaled_brier"]
+    if scaled_brier.get("ci_low") is None or scaled_brier.get("ci_high") is None:
+        # No interval was estimated, so no claim about beating the base rate is
+        # supportable. Anything other than 'indeterminate' here is an
+        # unsupported claim — and until this was fixed, training with the
+        # bootstrap switched off raised TypeError while formatting the headline.
+        assert usefulness["verdict"] == "indeterminate"
+    assert "base rate" in usefulness["headline"]
+
+    primary = report["primary_metrics"]
+    assert primary["n"] == report["evaluation_design"]["sizes"]["test"]
+    assert 0.0 <= primary["discrimination"]["auroc"]["value"] <= 1.0
+    assert 0.0 <= primary["accuracy"]["brier"]["value"] <= 1.0
+    assert 0.0 <= primary["prevalence"] <= 1.0
+
+    limitations = report["limitations"]
+    assert limitations, "a validation report with no stated limitations"
+    assert any("synthetic" in item.lower() for item in limitations), (
+        "the report does not state that the model was trained on synthetic data"
+    )
+    assert any("component" in item.lower() for item in limitations)
+
+    assert report["coefficient_sign_audit"], "the sign audit is not published"
+
+
+def test_feature_schema_is_the_declared_63(client: TestClient) -> None:
+    """If this breaks, the Methods page and the model disagree about the inputs.
+
+    The feature schema is the published contract between evidence and model.
+    Serving a different set than the registry declares means the documented
+    derivation of a driver no longer describes the number shown.
+    """
+    from trs.features.registry import FEATURES
+    from trs.features.spec import DOMAIN_LABELS
+
+    response = client.get("/api/v1/model/features")
+    assert response.status_code == 200
+    specs = response.json()
+
+    assert len(specs) == 63 == len(FEATURES)
+    assert [s["name"] for s in specs] == [f.name for f in FEATURES]
+    assert len({s["name"] for s in specs}) == 63
+
+    labels = {str(k): v for k, v in DOMAIN_LABELS.items()}
+    for spec in specs:
+        assert spec["label"] and spec["description"] and spec["derivation"]
+        assert spec["domain"] in labels
+        assert spec["domain_label"] == labels[spec["domain"]]
+        assert spec["expected_direction"] in {"increases_risk", "decreases_risk", "uncertain"}
+        assert isinstance(spec["scenario_adjustable"], bool)
+        assert spec["completeness_weight"] >= 0
+        if spec["valid_min"] is not None and spec["valid_max"] is not None:
+            assert spec["valid_min"] <= spec["valid_max"]
+
+    assert sum(1 for s in specs if s["scenario_adjustable"]) > 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 11. Probability bounds, everywhere
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_every_probability_in_a_score_response_is_bounded(score: dict[str, Any]) -> None:
+    """If this breaks, the interface can display a 130% chance of failure.
+
+    Probabilities reach the UI from four subsystems — the calibrator, the
+    uncertainty decomposition, the explanation and the completeness report —
+    and a bound violation in any of them is a visible, credibility-destroying
+    defect. The walk is recursive because most of these live several levels
+    deep in the payload.
+    """
+    assert_probabilities_bounded(score, minimum_checked=12)
+
+
+def test_every_probability_in_a_scenario_response_is_bounded(
+    client: TestClient, scorable_track: dict[str, Any]
+) -> None:
+    """If this breaks, an overridden feature can push a probability out of range.
+
+    A scenario feeds hand-supplied feature values through the same model. It is
+    the path most likely to produce an extreme design row, and it nests two
+    complete score payloads, so the bound check has to cover both.
+    """
+    response = client.post(
+        f"/api/v1/programs/{scorable_track['id']}/scenarios",
+        json={"lever_keys": ["exposure_gap_identified", "contradictory_study_appears"]},
+    )
+    assert response.status_code == 200, response.text
+    assert_probabilities_bounded(response.json(), minimum_checked=24)
