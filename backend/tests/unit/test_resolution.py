@@ -426,5 +426,7 @@ def test_seeded_alias_keys_match_the_resolvers_normalisation(seeded_session) -> 
 def test_target_alias_keys_are_consistent_too(seeded_session) -> None:
     """If this fails, target lookups fall through to fuzzy matching."""
     session, _ = seeded_session
-    for alias in session.scalars(select(TargetAlias).limit(40)):
+    aliases = list(session.scalars(select(TargetAlias).limit(40)))
+    assert aliases, "no target aliases were seeded; the check below would be vacuous"
+    for alias in aliases:
         assert normalise_target(alias.alias) == alias.alias_normalised

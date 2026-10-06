@@ -28,7 +28,7 @@ ENDPOINT  ?= ph2_efficacy_failure
 COHORT    ?= oncology_ph2_efficacy
 
 .DEFAULT_GOAL := help
-.PHONY: help install db seed train api web test lint clean demo
+.PHONY: help install db seed train api web test lint clean demo facts
 
 help:  ## Show this help.
 	@echo "Preclinical Translational Risk Scorer"
@@ -87,6 +87,9 @@ web:  ## Run the Next.js development server.
 
 test:  ## Run the backend test suite (offline; no network, in-memory database).
 	cd $(BACKEND) && $(PY) -m pytest tests
+
+facts:  ## Print every checkable number, for verifying documentation against the live system.
+	cd $(BACKEND) && $(PY) -m trs.cli facts
 
 lint:  ## Ruff on the backend, TypeScript on the frontend.
 	@if [ -x "$(RUFF)" ]; then \

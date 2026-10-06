@@ -175,6 +175,19 @@ def cmd_pipeline(args: argparse.Namespace) -> int:
     return cmd_train(args)
 
 
+def cmd_facts(args: argparse.Namespace) -> int:
+    """Print every checkable number, so documentation can be verified against it."""
+    from trs.db.session import session_scope
+    from trs.reporting.facts import fact_sheet, fact_sheet_json, render_fact_sheet
+
+    with session_scope() as session:
+        if args.json:
+            print(fact_sheet_json(session))
+        else:
+            print(render_fact_sheet(fact_sheet(session)))
+    return 0
+
+
 def cmd_oracle(args: argparse.Namespace) -> int:
     from trs.db.session import session_scope
     from trs.seed.diagnostics import oracle_benchmark
@@ -254,6 +267,10 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--name", default=None)
     sp.add_argument("--list", action="store_true")
     sp.set_defaults(func=cmd_connectors)
+
+    sp = sub.add_parser("facts", help="Print every checkable number for documentation review.")
+    sp.add_argument("--json", action="store_true")
+    sp.set_defaults(func=cmd_facts)
 
     sp = sub.add_parser("oracle", help="Maximum attainable performance on the demo cohort.")
     sp.add_argument("--cohort", default=None)

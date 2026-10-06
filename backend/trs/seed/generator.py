@@ -609,6 +609,7 @@ class DemoDataGenerator:
         outcome, reason, outcome_date, highest_phase = self._draw_outcome(
             p_fail, ind_date, data_cutoff
         )
+        milestones = self._milestones(highest_phase, ind_date, fih_date, outcome_date)
 
         track = ProgramIndication(
             program_id=program.id,
@@ -640,6 +641,9 @@ class DemoDataGenerator:
             preclinical_start_on=first_disclosure,
             ind_or_cta_on=ind_date,
             first_in_human_on=fih_date,
+            phase_2_start_on=milestones["phase_2_start_on"],
+            phase_3_start_on=milestones["phase_3_start_on"],
+            approval_on=milestones["approval_on"],
             highest_phase_reached=highest_phase,
             outcome_label=outcome,
             outcome_date=outcome_date,
@@ -661,6 +665,58 @@ class DemoDataGenerator:
         self._create_pkpd(track, latents, ind_date)
         self._create_biomarkers(track, latents, ind_date)
         self._create_safety(track, program, latents, ind_date)
+
+    def _milestones(
+        self,
+        highest_phase: str,
+        ind_date: dt.date,
+        fih_date: dt.date,
+        outcome_date: dt.date | None,
+    ) -> dict[str, dt.date | None]:
+        """Derive the milestone chain implied by the highest phase reached.
+
+        The dates are generated rather than drawn independently so the chain is
+        always internally consistent: a program that reached Phase III has a
+        Phase II start, and every milestone falls strictly after the one before
+        it and no later than the outcome that ended the program. An
+        inconsistent chain would make the alternative as-of rules
+        (`first_in_human_on`, `phase_2_start_on`) produce cutoffs that precede
+        the evidence they are supposed to admit.
+        """
+        rng = self.rng
+        order = [
+            E.DevelopmentPhase.PHASE_1, E.DevelopmentPhase.PHASE_1_2,
+            E.DevelopmentPhase.PHASE_2, E.DevelopmentPhase.PHASE_2_3,
+            E.DevelopmentPhase.PHASE_3, E.DevelopmentPhase.FILED,
+            E.DevelopmentPhase.APPROVED,
+        ]
+        rank = {str(p): i for i, p in enumerate(order)}
+        reached = rank.get(str(highest_phase), -1)
+        ceiling = outcome_date or (fih_date + dt.timedelta(days=4000))
+
+        out: dict[str, dt.date | None] = {
+            "phase_2_start_on": None, "phase_3_start_on": None, "approval_on": None,
+        }
+
+        def _after(prev: dt.date, lo: int, hi: int) -> dt.date | None:
+            candidate = prev + dt.timedelta(days=int(rng.integers(lo, hi)))
+            # A milestone that would postdate the program's own ending never
+            # happened; returning None is correct, not a gap to be filled.
+            return candidate if candidate < ceiling else None
+
+        if reached >= rank[str(E.DevelopmentPhase.PHASE_2)]:
+            out["phase_2_start_on"] = _after(fih_date, 240, 900)
+
+        if reached >= rank[str(E.DevelopmentPhase.PHASE_3)] and out["phase_2_start_on"]:
+            out["phase_3_start_on"] = _after(out["phase_2_start_on"], 400, 1300)
+
+        if reached >= rank[str(E.DevelopmentPhase.APPROVED)]:
+            # Approval IS the outcome date for an approved program; using a
+            # separately drawn date would let the two disagree.
+            out["approval_on"] = outcome_date
+            if out["phase_3_start_on"] is None and out["phase_2_start_on"]:
+                out["phase_3_start_on"] = _after(out["phase_2_start_on"], 400, 1100)
+        return out
 
     def _draw_outcome(
         self, p_fail: float, ind_date: dt.date, data_cutoff: dt.date

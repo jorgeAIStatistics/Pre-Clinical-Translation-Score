@@ -72,7 +72,12 @@ def test_all_six_connectors_are_registered() -> None:
 
 
 def test_catalogue_declares_provenance_metadata() -> None:
-    for entry in connector_catalogue():
+    catalogue = connector_catalogue()
+    assert len(catalogue) == len(ALL_CONNECTORS), (
+        "an empty or shrunken catalogue would make the per-entry checks below "
+        f"pass vacuously; got {[e['name'] for e in catalogue]}"
+    )
+    for entry in catalogue:
         assert entry["display_name"], f"{entry['name']} has no display name"
         assert entry["homepage"], f"{entry['name']} has no homepage for the provenance UI"
         assert entry["version"]
@@ -197,16 +202,25 @@ ENUM_FIELDS = {
 def test_emitted_categoricals_are_valid_enum_members(name: str, fixture: str) -> None:
     with get_connector(name) as c:
         records = c.normalise(make_payload(fixture))
+    assert records, f"{name} produced no records from {fixture}"
     valid = {field: {str(m) for m in enum} for field, enum in ENUM_FIELDS.items()}
+    checked = 0
     for r in records:
         for field, allowed in valid.items():
             value = r.payload.get(field)
             if value is None:
                 continue
+            checked += 1
             assert str(value) in allowed, (
                 f"{name}: {field}={value!r} is not a member of "
                 f"{ENUM_FIELDS[field].__name__}"
             )
+    # Without this the test passes for a connector that stopped emitting
+    # categoricals altogether, which is exactly when it should fail.
+    assert checked, (
+        f"{name}: no categorical field was checked. Either the connector "
+        f"stopped populating {sorted(ENUM_FIELDS)} or the field names moved."
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -258,6 +272,7 @@ def test_opentargets_available_at_is_the_retrieval_date() -> None:
     payload = make_payload("opentargets_target_disease_association.json")
     with get_connector("opentargets") as c:
         records = c.normalise(payload)
+    assert records, "no records to check — the loop below would pass vacuously"
     for r in records:
         assert r.available_at == payload.fetched_at.date(), (
             "an un-back-datable score must be dated to retrieval, not earlier"

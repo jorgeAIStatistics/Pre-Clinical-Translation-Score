@@ -40,6 +40,7 @@ from trs.modeling.calibration import (
 from trs.modeling.hierarchical import HierarchicalLogisticRisk
 from trs.modeling.logistic import _INTERCEPT_PRECISION, L2LogisticRisk
 from trs.modeling.uncertainty import predict_with_uncertainty
+from trs.pipeline.calibrate import cross_validated_calibration
 from trs.pipeline.select import (
     ATTRIBUTION_LOSS_SURCHARGE,
     CALIBRATION_SLOPE_BAND,
@@ -840,6 +841,80 @@ def test_leakage_audit_distinguishes_a_clean_split_from_a_corrupted_one():
     assert dirty["clean"] is False
     assert dirty["component"] == 1
     assert dirty["program"] == 1
+
+
+def test_calibrator_is_never_fitted_on_a_score_from_a_model_that_saw_that_row():
+    """If this fails, the calibration curve is fitted on in-sample scores.
+
+    ``cross_validated_calibration`` is the one place a leak would not show up as
+    a split violation: the model and the calibrator are both fitted on the
+    training partition, so ``leakage_audit`` sees nothing wrong. The protection
+    is entirely internal — each pooled score must come from a fold model that
+    did not see the row it is scoring. Fit the fold models on all the rows
+    instead and the pooled scores become in-sample, the calibrator learns to
+    correct over-confidence the final model does not have, and every published
+    probability is skewed with no diagnostic anywhere reporting it.
+
+    The fold models are spied on rather than inspected indirectly: each row of
+    the design matrix is a distinct continuous draw, so a fitted matrix can be
+    mapped back to the exact row indices it contained.
+    """
+    rng = np.random.default_rng(5)
+    n = 300
+    X = rng.standard_normal((n, 4))
+    components = rng.integers(0, 60, size=n)
+    y = (rng.random(n) < sigmoid(X @ np.array([1.2, -0.8, 0.5, 0.0]))).astype(int)
+    assert len(np.unique(y)) == 2
+
+    row_of = {X[i].tobytes(): i for i in range(n)}
+    assert len(row_of) == n, "rows must be uniquely identifiable for the spy"
+    fitted_rows: list[set[int]] = []
+
+    class SpyLogistic(L2LogisticRisk):
+        def fit(self, X_fit, y_fit, **kwargs):
+            fitted_rows.append({row_of[r.tobytes()] for r in np.asarray(X_fit)})
+            return super().fit(X_fit, y_fit, **kwargs)
+
+    _model, _cal, record = cross_validated_calibration(
+        lambda: SpyLogistic(l2_penalty=4.0),
+        X, y,
+        components=components,
+        columns=[f"f{i}" for i in range(4)],
+        n_folds=5,
+        random_state=0,
+    )
+
+    # The calibrator must have been fitted out of fold, not in sample. The
+    # fallback path is legitimate on tiny data but not here, and it would make
+    # every assertion below meaningless.
+    assert record["design"] == "cross_validated_out_of_fold", record
+    assert record["n_out_of_fold_predictions"] == n
+
+    # grouped_kfold is deterministic in random_state, so the folds the
+    # implementation used are re-derivable here.
+    folds = [
+        (tr, te) for tr, te in grouped_kfold(components, n_splits=5, y=y, random_state=0)
+        if len(np.unique(y[tr])) >= 2
+    ]
+    assert folds
+    assert len(fitted_rows) == len(folds) + 1, (
+        "expected one fit per usable fold plus the final full-data refit; got "
+        f"{len(fitted_rows)} fits for {len(folds)} folds"
+    )
+
+    # The final model is refitted on everything — that is intended, and it is
+    # not what the calibrator was fitted on.
+    assert fitted_rows[-1] == set(range(n))
+
+    scored_rows: set[int] = set()
+    for (train_idx, test_idx), seen in zip(folds, fitted_rows[:-1], strict=True):
+        assert seen == set(train_idx.tolist())
+        # The invariant: the rows this fold model scored are rows it never saw.
+        assert seen.isdisjoint(test_idx.tolist())
+        scored_rows |= set(test_idx.tolist())
+
+    # ...and every row's calibration input came from exactly one such model.
+    assert scored_rows == set(range(n))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

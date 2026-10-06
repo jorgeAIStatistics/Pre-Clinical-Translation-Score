@@ -1047,6 +1047,10 @@ class TestBuildCohort:
         cast to 0 — thousands of fabricated successes."""
         session, _ = seeded_session
         result = build_cohort(session, data_cutoff=today, persist=False)
+        assert result.entries, (
+            "the cohort is empty, so every per-entry assertion below would "
+            "pass vacuously — a builder that excluded everything must fail here"
+        )
 
         for entry in result.entries:
             assert entry.label_primary in (0, 1)
@@ -1087,6 +1091,7 @@ class TestBuildCohort:
             build_cohort(session, as_of_rule="phase_3_start_on", persist=False)
 
         result = build_cohort(session, data_cutoff=today, persist=False)
+        assert result.entries, "an empty cohort would make the as-of check vacuous"
         tracks = {
             t.id: t for t in session.execute(select(ProgramIndication)).scalars().all()
         }
@@ -1094,8 +1099,30 @@ class TestBuildCohort:
             track = tracks[entry.program_indication_id]
             expected = track.ind_or_cta_on or track.first_in_human_on
             assert entry.as_of_date == expected
+            assert entry.as_of_date <= today
+
+        # The "never falls forward" half of this test needs tracks that actually
+        # reached Phase II. An earlier version guarded this check with
+        # ``if track.phase_2_start_on is not None`` and so ran on zero rows —
+        # the generator did not populate the milestone at the time, and the
+        # check passed vacuously. The generator now derives the full milestone
+        # chain, so the assertion is unguarded and the count is asserted
+        # non-zero: if the field ever stops being populated, this fails loudly
+        # instead of going quiet.
+        checked_phase_2 = 0
+        for entry in result.entries:
+            track = tracks[entry.program_indication_id]
             if track.phase_2_start_on is not None:
-                assert entry.as_of_date <= track.phase_2_start_on
+                checked_phase_2 += 1
+                assert entry.as_of_date <= track.phase_2_start_on, (
+                    f"as-of {entry.as_of_date} fell forward past the Phase II "
+                    f"start {track.phase_2_start_on}, admitting Phase I results "
+                    "into a preclinical feature vector"
+                )
+        assert checked_phase_2 > 0, (
+            "no track carried a Phase II start date, so the 'never falls "
+            "forward' property was not actually exercised"
+        )
 
 
 # ═════════════════════════════════════════════════════════════════════════════
