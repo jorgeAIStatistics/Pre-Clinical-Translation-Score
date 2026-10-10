@@ -43,6 +43,7 @@ evidence package and reports what that package currently supports, with its weak
 5. [Where to read next](#5-where-to-read-next)
 6. [Verifying the numbers in this README](#6-verifying-the-numbers-in-this-readme)
 7. [Known limitations](#7-known-limitations)
+8. [Licence and citation](#8-licence-and-citation)
 
 ---
 
@@ -621,6 +622,29 @@ inside `backend/`.
 Nothing else depends on the install. Every command in this README runs `python -m trs.cli` or
 `uvicorn` with `backend/` as the working directory, and `pyproject.toml` already sets
 `pythonpath = ["."]` for pytest, so the package resolves without being installed.
+
+---
+
+## 8. Licence and citation
+
+Copyright (c) 2026 Jorge Rodriguez. Released under the [MIT Licence](LICENSE) — you may use, copy,
+modify and redistribute this code, including commercially, provided the copyright notice and
+licence text travel with it.
+
+The MIT Licence's warranty disclaimer is not boilerplate here. This platform is a synthetic
+demonstration with no clinical validation and no regulatory standing, and it reports, in its own
+model artifact, that its registered model is **not statistically distinguishable from quoting the
+cohort base rate** (see [7.1](#71-the-registered-model-is-not-distinguishable-from-the-base-rate)).
+Nothing in this repository should inform a real development decision. If you reuse the code, the
+obligation to validate it against real data, and to state honestly what that validation shows, is
+yours.
+
+What is reusable independent of the demonstration data: the as-of temporal-integrity layer
+(`backend/trs/features/temporal.py`), the grouped and temporal validation splitters
+(`backend/trs/validation/`), the calibration and usefulness-gate machinery
+(`backend/trs/modeling/calibration.py`, `backend/trs/pipeline/select.py`) and the exact additive
+log-odds attribution (`backend/trs/scoring/explanation.py`). Those components encode method, not
+findings.
 
 ---
 

@@ -3,6 +3,11 @@ name = "trs"
 version = "0.1.0"
 description = "Preclinical Translational Risk Scorer — estimates and explains the risk that preclinical evidence fails to translate into human clinical efficacy"
 requires-python = ">=3.11"
+authors = [{ name = "Jorge Rodriguez" }]
+# SPDX expression rather than a `license-files` glob: the licence lives at the
+# repository root, and pointing setuptools outside the project directory is the
+# exact mistake documented below for `readme`. Needs setuptools >= 77.
+license = "MIT"
 # No `readme` key: setuptools refuses to read a readme from outside the project
 # directory, and the project README lives at the repository root because it
 # documents the frontend too. Pointing at "../README.md" makes `pip install -e`
@@ -47,7 +52,7 @@ bayes = ["pymc>=5.10"]
 trs = "trs.cli:main"
 
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=77", "wheel"]  # >=77 for the SPDX `license` field
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
