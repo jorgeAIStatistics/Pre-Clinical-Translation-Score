@@ -67,20 +67,12 @@ elsewhere.
 make install
 ```
 
-> **The editable install is currently broken, and `make install` works around it.**
-> `backend/pyproject.toml` declares `readme = "../README.md"`; setuptools refuses to read a readme
-> from outside the project directory, so `pip install -e "backend[dev]"` fails during metadata
-> generation with `Cannot access '.../backend/../README.md'`. `make install` catches that, explains
-> it, and installs the dependency set directly instead. Nothing else is affected: the `trs` package
-> is imported from `backend/` as the working directory by every documented command, so it does not
-> need to be installed. See [§7.15](#715-the-editable-install-of-backend-is-broken).
-
 Equivalently, by hand:
 
 ```bash
 cd /Users/jorgerodriguez/Desktop/Bioinformatics
 python3 -m venv .venv
-./.venv/bin/pip install -e "backend[dev]"   # see the note above — currently fails
+./.venv/bin/pip install -e "backend[dev]"
 ```
 
 Create the schema:
@@ -599,29 +591,6 @@ probability of failure will under-estimate total attrition. The conditional clau
 verbatim beside the number on every surface for this reason; the composite endpoint
 `ph2_any_scientific_failure` exists so the unconditional scientific-attrition question can be asked
 directly.
-
-### 7.15 The editable install of `backend/` is broken
-
-`backend/pyproject.toml` sets `readme = "../README.md"`. Setuptools' `_assert_local` refuses any
-path outside the project directory, so `pip install -e "backend[dev]"` and
-`pip install "backend[dev]"` both fail at metadata generation:
-
-```
-distutils.errors.DistutilsOptionError: Cannot access
-'/Users/jorgerodriguez/Desktop/Bioinformatics/backend/../README.md'
-(or anything outside '/Users/jorgerodriguez/Desktop/Bioinformatics/backend')
-```
-
-Consequences: the `trs` console script declared under `[project.scripts]` is never installed, and
-the declared dependency set cannot be installed through the package. `make install` detects the
-failure, prints the diagnosis and installs the dependencies directly from a list transcribed in the
-Makefile. That fallback is a workaround, not a fix — it duplicates the dependency set and will
-drift. The fix belongs in `pyproject.toml`: either drop the `readme` key or point it at a file
-inside `backend/`.
-
-Nothing else depends on the install. Every command in this README runs `python -m trs.cli` or
-`uvicorn` with `backend/` as the working directory, and `pyproject.toml` already sets
-`pythonpath = ["."]` for pytest, so the package resolves without being installed.
 
 ---
 

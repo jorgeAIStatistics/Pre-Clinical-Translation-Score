@@ -38,35 +38,10 @@ help:  ## Show this help.
 	@echo
 	@echo "Demonstration data only. See README.md before interpreting any number."
 
-# Fallback dependency set, transcribed from backend/pyproject.toml. It exists only
-# because the editable install is currently broken: pyproject declares
-# `readme = "../README.md"`, and setuptools refuses to read a readme from outside
-# the project directory, so metadata generation fails with
-#   DistutilsOptionError: Cannot access '.../backend/../README.md'
-# Delete FALLBACK_DEPS and the `||` branch below once that line is fixed — the
-# package is importable from backend/ without installation, so only the
-# dependencies are actually required.
-FALLBACK_DEPS := \
-  "numpy>=1.26" "pandas>=2.2" "scipy>=1.12" "scikit-learn>=1.4" "statsmodels>=0.14" \
-  "SQLAlchemy>=2.0" "alembic>=1.13" \
-  "fastapi>=0.110" "uvicorn[standard]>=0.29" "pydantic>=2.6" "pydantic-settings>=2.2" \
-  "httpx>=0.27" "python-multipart>=0.0.9" \
-  "passlib[bcrypt]>=1.7.4" "python-jose[cryptography]>=3.3" \
-  "pytest>=8.0" "pytest-cov>=5.0" "ruff>=0.4"
-
 install:  ## Create the venv if absent, install the backend (editable, with dev extras) and the frontend.
 	@test -d $(VENV) || python3 -m venv $(VENV)
 	$(PIP) install --upgrade pip
-	@$(PIP) install -e "$(BACKEND)[dev]" || { \
-	  echo ""; \
-	  echo ">> Editable install of backend/ failed."; \
-	  echo ">> Known cause: backend/pyproject.toml sets readme = \"../README.md\","; \
-	  echo ">> which setuptools refuses to read from outside the project directory."; \
-	  echo ">> Installing dependencies directly instead. The package is importable"; \
-	  echo ">> from backend/ without installation, so every documented command works."; \
-	  echo ""; \
-	  $(PIP) install $(FALLBACK_DEPS); \
-	}
+	$(PIP) install -e "$(BACKEND)[dev]"
 	cd $(FRONTEND) && npm install --no-audit --no-fund
 
 db:  ## Apply Alembic migrations to TRS_DATABASE_URL (SQLite by default).
