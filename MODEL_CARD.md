@@ -1,4 +1,4 @@
-# Model Card — `ptrs-pef-004`
+# Model Card — `ptrs-pef-007`
 
 **Preclinical Translational Risk Scorer**, primary endpoint `ph2_efficacy_failure`.
 
@@ -36,7 +36,7 @@ from, how it is tracked, and exactly what is real versus simulated here.
 
 | Field | Value | Source of truth |
 |---|---|---|
-| Model version | `ptrs-pef-004` | `model_artifact.version` |
+| Model version | `ptrs-pef-007` | `model_artifact.version` |
 | Active in registry | `true` | `model_artifact.is_active` |
 | Package version | `trs 0.1.0` | `trs/__init__.py` |
 | Model family | `l2_logistic` | `trs/modeling/logistic.py` |
@@ -47,7 +47,7 @@ from, how it is tracked, and exactly what is real versus simulated here.
 | Cohort dataset hash | `92cd561dfbbe222fa1cc8ff741058cbdec2cde226fc2af53a8b3072ebe331c1e` | `cohort_version.dataset_hash` (SHA-256 over the cohort definition plus sorted `(track, as_of, label)` members) |
 | Training-matrix hash | `2aee684d46c1a413ee09ea30374c29011fae68e94277f5f7142dbb95dbff150b` | `model_artifact.dataset_hash` (SHA-256 over columns, `X` rounded to 1e-10, and `y`) |
 | Cohort built at | `2026-09-24T12:51:03.811594+00:00` | `cohort_version.built_at` |
-| Trained at | `2026-10-13T23:10:43.416456+00:00` | `model_artifact.trained_at` |
+| Trained at | `2026-10-13T23:33:50.568502+00:00` | `model_artifact.trained_at` |
 | `trained_on_synthetic` | `true` | `model_artifact.trained_on_synthetic` |
 | **Status** | **`demo_only`** | `model_artifact.status`, derived by `trs/pipeline/status.py` against criteria `pc-1.0.0` |
 | May this artifact serve a score? | Only for synthetic evidence, in an explicitly selected demonstration context | `SERVING_PERMITTED` + `check_eligibility()` |
@@ -55,7 +55,7 @@ from, how it is tracked, and exactly what is real versus simulated here.
 | Split manifest hash | `165cb164f07e…` | `metrics.protocol.split_manifest.manifest_hash` |
 | Served prediction functional | `calibrated_plug_in` | `model_artifact.prediction_functional`, contract `pcx-1.0.0` |
 | Artifact payload format | `2` | format `1` artifacts still load, with denying defaults |
-| Git commit | `4e55da097a9b4035da94c25d86cdfafcf3a3c9aa` | `model_artifact.git_commit` — the commit the training run was made from. Earlier artifacts recorded `null` because the working tree had no commits yet, which the field reported honestly rather than guessing |
+| Git commit | `f4719f57bf4b3980843c8d29195f7e44c075ccad` | `model_artifact.git_commit` — the commit the training run was made from. Earlier artifacts recorded `null` because the working tree had no commits yet, which the field reported honestly rather than guessing |
 
 Two hashes exist because they answer different questions. The cohort hash
 answers "is this the same set of labelled units?"; the training-matrix hash
@@ -130,8 +130,8 @@ conservatism, not a neutral choice.
 
 Two further artifacts were trained on the identical matrix and registered
 inactive, so the comparison in §[7.5](#75-model-family-selection) is auditable
-rather than asserted: `ptrs-pef-004-alt-hierarchical_logistic` and
-`ptrs-pef-004-alt-gbdt`.
+rather than asserted: `ptrs-pef-007-alt-hierarchical_logistic` and
+`ptrs-pef-007-alt-gbdt`.
 
 ---
 
@@ -1031,7 +1031,7 @@ doing its job. **None of these has been changed** — this document does not mod
 ---
 
 *Generated against the live repository and database on 2026-09-24. Every figure in
-this card was read from `backend/artifacts/ptrs-pef-004.json`,
+this card was read from `backend/artifacts/ptrs-pef-007.json`,
 `backend/artifacts/demo_ground_truth.json`, `backend/trs.db`, or recomputed by
 running the commands in §10.1. No figure was transcribed from memory or from any
 prior document.*

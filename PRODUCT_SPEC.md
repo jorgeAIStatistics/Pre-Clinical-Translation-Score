@@ -590,7 +590,7 @@ free-text questions.
 ## 11. Where the product actually stands
 
 The platform's own verdict on the registered demonstration model, read from
-`backend/artifacts/ptrs-pef-004.json` (`metrics.usefulness`):
+`backend/artifacts/ptrs-pef-007.json` (`metrics.usefulness`):
 
 > **`not_distinguishable_from_base_rate`**
 >

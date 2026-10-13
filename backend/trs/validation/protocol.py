@@ -273,6 +273,17 @@ class SplitManifest:
             "eligibility_rules": list(self.eligibility_rules),
             "label_maturity": self.label_maturity,
             "limitations": list(self.limitations),
+            # Row identifiers, not just counts. A manifest that says "127
+            # evaluation rows" cannot be checked; one that says *which* 127 can.
+            # This is what lets a reviewer re-run a diagnostic on exactly the
+            # partition the artifact was evaluated on, and what lets a test
+            # assert that a later run used the same rows rather than merely the
+            # same number of them.
+            "development_row_ids": [self.row_ids[i] for i in self.development],
+            "evaluation_row_ids": [self.row_ids[i] for i in self.evaluation],
+            "purged_rows": [
+                {"row_id": p.row_id, "reason": p.reason} for p in self.purged
+            ],
             "manifest_hash": self.manifest_hash,
         }
 

@@ -97,7 +97,7 @@ The deployed family is `L2LogisticRisk` — L2-penalised logistic regression wit
 an analytic Laplace posterior (`trs/modeling/logistic.py`). It is the default
 because of three properties that the product depends on, not because the
 alternatives were unavailable or untried. Both alternatives were fitted on the
-same cohort and the same split in the run that produced `ptrs-pef-004`; see
+same cohort and the same split in the run that produced `ptrs-pef-007`; see
 [§4](#4-the-selection-gate).
 
 ### 2.1 Exact additive attribution
@@ -338,7 +338,7 @@ the bar was where it was.
 
 ### What happened on the demonstration run
 
-Recorded in `metrics.model_comparison` of `backend/artifacts/ptrs-pef-004.json`:
+Recorded in `metrics.model_comparison` of `backend/artifacts/ptrs-pef-007.json`:
 
 | Family | Test log loss | AUROC | Calibration slope | Outcome |
 |---|---|---|---|---|
@@ -797,7 +797,7 @@ cd backend
 ```
 
 Every metric quoted above is read from
-`backend/artifacts/ptrs-pef-004.json`, under `metrics.primary_metrics`,
+`backend/artifacts/ptrs-pef-007.json`, under `metrics.primary_metrics`,
 `metrics.model_comparison`, `metrics.calibration_selection`,
 `metrics.hyperparameter_selection`, `metrics.interval_agreement` and
 `metrics.coefficient_sign_audit`. The sklearn cross-check in §2.3 and the

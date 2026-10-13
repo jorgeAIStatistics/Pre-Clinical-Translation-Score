@@ -75,7 +75,7 @@ its earlier rows are dropped. Assigning to the later side is the conservative
 direction: it removes rows from training rather than letting future-resolved
 siblings inform an earlier prediction.
 
-On the registered model `ptrs-pef-004`:
+On the registered model `ptrs-pef-007`:
 
 | | |
 |---|---|
@@ -198,7 +198,7 @@ information a real analyst possesses. Mechanism remains available as the groupin
 > **Note on a stale figure.** The docstring of `trs/validation/splitters.py`
 > reports the mechanism-grouping collapse as "211 rows into 9 components". That
 > figure is from an earlier, smaller cohort. On the cohort backing
-> `ptrs-pef-004` the measured figure is **552 rows into 8 components**, largest
+> `ptrs-pef-007` the measured figure is **552 rows into 8 components**, largest
 > 245. The qualitative conclusion is unchanged and stronger; the number in the
 > docstring should be refreshed.
 
@@ -227,7 +227,7 @@ difference.
 ### Leakage is asserted, not assumed
 
 `leakage_audit()` runs after every split the report uses, and `train()` raises
-`RuntimeError` if it comes back unclean. On `ptrs-pef-004`:
+`RuntimeError` if it comes back unclean. On `ptrs-pef-007`:
 
 ```
 component: 0   program: 0   compound: 0   →  clean: true
@@ -254,7 +254,7 @@ The same unit is used for the paired model-comparison test
 same programs: comparing two independent intervals would discard the shared
 variation and badly overstate the uncertainty in the difference.
 
-On `ptrs-pef-004`: 500 replicates requested, unit = `connected component`,
+On `ptrs-pef-007`: 500 replicates requested, unit = `connected component`,
 level = 0.95, and all 500 were usable for every metric
 (`primary_metrics.bootstrap`, and `n_bootstrap: 500` on each estimate). Replicates
 that draw fewer than 10 rows or only one outcome class are discarded rather than
@@ -307,7 +307,7 @@ that calibration and utility outrank discrimination. The ordering is a
 deliberate statement: a committee comparing 35% against 70% is reading the
 numbers, not the ranking.
 
-### Evaluation-partition performance, `ptrs-pef-004` (n = 127, 70 positive)
+### Evaluation-partition performance, `ptrs-pef-007` (n = 127, 70 positive)
 
 | Group | Metric | Value | 95% component-bootstrap CI |
 |---|---|---|---|
@@ -356,7 +356,7 @@ where the threshold `pt` encodes the committee's own exchange rate between a
 wrongly killed good program and a wrongly funded bad one. A model is useful over
 the range where its curve sits above **both** reference strategies.
 
-On `ptrs-pef-004` (evaluation prevalence 0.551), the model's net benefit exceeds both
+On `ptrs-pef-007` (evaluation prevalence 0.551), the model's net benefit exceeds both
 `treat_all` and `treat_none` at thresholds **0.40, 0.45, 0.50, 0.55 and 0.60**:
 
 | Threshold | Model NB | Treat-all NB | Treat-none NB |
@@ -398,7 +398,7 @@ confounding, or a data bug — but it must be seen rather than averaged into an
 aggregate. Only discordances whose credible interval excludes zero are treated
 as material.
 
-On `ptrs-pef-004`: **56 checked, 21 discordant, 0 credibly discordant.** Every
+On `ptrs-pef-007`: **56 checked, 21 discordant, 0 credibly discordant.** Every
 discordant interval straddled zero. Example: `animal_mean_disease_similarity`
 was declared `decreases_risk` and fitted at +0.039 with an interval of
 [−0.095, +0.174] — an unresolved sign, not a contradicted one. That profile is
@@ -446,7 +446,7 @@ them with the analytic Laplace widths on the log-odds scale. Agreement within
 ±25% is treated as acceptable; systematically narrower analytic intervals would
 mean the published uncertainty is optimistic.
 
-On `ptrs-pef-004`: median ratio (analytic ÷ bootstrap) **1.90**, p10 1.55,
+On `ptrs-pef-007`: median ratio (analytic ÷ bootstrap) **1.90**, p10 1.55,
 p90 2.44, verdict **`analytic_intervals_too_wide`**. The published intervals are
 conservative by roughly a factor of two — the safe direction, but a real finding
 discussed in [MODELING_PLAN.md §6.5](MODELING_PLAN.md#65-how-honest-are-the-intervals).
@@ -469,7 +469,7 @@ with a number. Publishing an AUROC from 5 programs invites over-reading, and
 suppressing the row entirely hides that the subgroup exists at all; the code
 does neither.
 
-Selected reported levels from `ptrs-pef-004`:
+Selected reported levels from `ptrs-pef-007`:
 
 | Variable | Level | n | AUROC | Scaled Brier | Calibration slope |
 |---|---|---|---|---|---|
@@ -576,7 +576,7 @@ matters is that no *future* information enters and that the focal program's own
 fate never does — both of which are enforced.
 
 **The consequence is that grouped folds are not fully independent through this
-channel**, and the ablation quantifies it. On `ptrs-pef-004`, removing the whole
+channel**, and the ablation quantifies it. On `ptrs-pef-007`, removing the whole
 historical-class-performance domain **improved** held-out log loss by 0.0027 and
 AUROC by 0.0015 (§7.2). On this data the channel carries no measurable
 advantage, so the residual dependence costs nothing that can be detected. That
@@ -673,7 +673,7 @@ cd backend
 ../.venv/bin/python -m pytest tests/unit -q
 ```
 
-Everything in §§3–7 is read from `backend/artifacts/ptrs-pef-004.json` under
+Everything in §§3–7 is read from `backend/artifacts/ptrs-pef-007.json` under
 `metrics.evaluation_design`, `metrics.primary_metrics`,
 `metrics.target_grouped_sensitivity`, `metrics.domain_ablation`,
 `metrics.interval_agreement`, `metrics.coefficient_sign_audit`,

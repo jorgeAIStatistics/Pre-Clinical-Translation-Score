@@ -537,7 +537,7 @@ This section is a map, not a specification; the substance is in
 
 ### The deployed model, on demonstration data
 
-Read from `backend/artifacts/ptrs-pef-004.json`. **All of these describe a simulation.**
+Read from `backend/artifacts/ptrs-pef-007.json`. **All of these describe a simulation.**
 
 | | |
 | --- | --- |
