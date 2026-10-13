@@ -66,12 +66,13 @@ test:  ## Run the backend test suite (offline; no network, in-memory database).
 facts:  ## Print every checkable number, for verifying documentation against the live system.
 	cd $(BACKEND) && $(PY) -m trs.cli facts
 
-lint:  ## Ruff on the backend, TypeScript on the frontend.
+lint:  ## Ruff on the backend; ESLint and TypeScript on the frontend.
 	@if [ -x "$(RUFF)" ]; then \
 	  cd $(BACKEND) && $(RUFF) check trs tests; \
 	else \
 	  echo "ruff is not installed in $(VENV); run 'make install' to add the dev extras."; \
 	fi
+	cd $(FRONTEND) && npm run lint
 	cd $(FRONTEND) && npm run typecheck
 
 clean:  ## Remove build and test caches. Leaves the database, model artifacts and connector cache alone.

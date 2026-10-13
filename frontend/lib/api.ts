@@ -8,6 +8,7 @@
  * effectively static.
  */
 
+import { DEMO_CONTEXT } from "./config";
 import type {
   Coefficient, ComparatorResponse, ConnectorHealth, EvidenceMatrix, EvidenceOut,
   FeatureSpec, HealthOut, PortfolioResponse, ProgramDetail, ScenarioComparison,
@@ -15,6 +16,7 @@ import type {
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+
 
 export class ApiError extends Error {
   constructor(readonly status: number, readonly path: string, message: string) {
@@ -78,9 +80,14 @@ export const api = {
   health: () => tryRequest<HealthOut>("/api/v1/health", { revalidate: 0 }),
 
   portfolio: (params: {
-    limit?: number; score?: boolean; therapeutic_area?: string;
+    limit?: number; offset?: number; score?: boolean; therapeutic_area?: string;
     modality?: string; target?: string; project_id?: string;
-  } = {}) => request<PortfolioResponse>(`/api/v1/portfolio${q(params)}`, { revalidate: false }),
+    demo_context?: boolean;
+  } = {}) =>
+    request<PortfolioResponse>(
+      `/api/v1/portfolio${q({ demo_context: DEMO_CONTEXT, ...params })}`,
+      { revalidate: false },
+    ),
 
   programs: (params: { q?: string; target?: string; modality?: string; limit?: number } = {}) =>
     request<TrackSummary[]>(`/api/v1/programs${q(params)}`, { revalidate: 0 }),
@@ -100,8 +107,20 @@ export const api = {
 
   safety: (id: string) => tryRequest<any>(`/api/v1/programs/${id}/safety`, { revalidate: 0 }),
 
-  score: (id: string, asOf?: string) =>
-    request<ScoreOut>(`/api/v1/programs/${id}/score${q({ as_of: asOf })}`, { revalidate: false }),
+  /**
+   * Scores one track.
+   *
+   * `demoContext` must be passed explicitly to obtain a number from a model
+   * trained on synthetic data; the backend refuses otherwise, and there is no
+   * server-side default-on. This surface is a demonstration deployment and
+   * labels itself as one on every page, so it opts in — but the opt-in is
+   * visible here rather than hidden in the backend.
+   */
+  score: (id: string, asOf?: string, demoContext = DEMO_CONTEXT) =>
+    request<ScoreOut>(
+      `/api/v1/programs/${id}/score${q({ as_of: asOf, demo_context: demoContext })}`,
+      { revalidate: false },
+    ),
 
   comparators: (id: string, limit = 8) =>
     request<ComparatorResponse>(`/api/v1/programs/${id}/comparators${q({ limit })}`, {

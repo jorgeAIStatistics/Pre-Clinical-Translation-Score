@@ -46,6 +46,13 @@ depends_on = None
 LEGACY_REVISION = "legacy-unversioned"
 LEGACY_ENDPOINT = "ph2_efficacy_failure"
 
+#: The constraint this migration replaces. Named by the project's metadata
+#: naming convention, so it can be dropped rather than requiring a table
+#: rebuild.
+OLD_UNIQUE = (
+    "uq_feature_snapshot_program_indication_id_as_of_date_feature_schema_version"
+)
+
 
 def upgrade() -> None:
     with op.batch_alter_table("feature_snapshot") as batch:
@@ -69,9 +76,20 @@ def upgrade() -> None:
             sa.Column("superseded_by_id", sa.String(length=32), nullable=True)
         )
 
-    # The old uniqueness is now too weak: it would forbid exactly the second
-    # snapshot that corrected evidence is supposed to create.
+    # The old uniqueness must be *dropped*, not merely supplemented. Leaving it
+    # in place forbids exactly the second snapshot that corrected evidence is
+    # supposed to create: the new constraint admits the row and the old one
+    # rejects it, so every rebuild after a correction fails with an
+    # IntegrityError.
+    #
+    # Nothing caught this until the migration met the real database. The test
+    # suite builds its schema with `Base.metadata.create_all`, which reflects
+    # the current model and therefore never had the old constraint at all;
+    # applying the migration to a copy exercised the DDL but inserted no rows.
+    # `tests/statistical/test_migrations.py` now applies the migrations to a
+    # fresh database and inserts two snapshots differing only by revision.
     with op.batch_alter_table("feature_snapshot") as batch:
+        batch.drop_constraint(OLD_UNIQUE, type_="unique")
         batch.create_index(
             "ix_feature_snapshot_evidence_revision", ["evidence_revision"]
         )
@@ -116,6 +134,10 @@ def downgrade() -> None:
 
     with op.batch_alter_table("feature_snapshot") as batch:
         batch.drop_constraint("uq_feature_snapshot_identity", type_="unique")
+        batch.create_unique_constraint(
+            OLD_UNIQUE,
+            ["program_indication_id", "as_of_date", "feature_schema_version"],
+        )
         batch.drop_index("ix_feature_snapshot_revision")
         batch.drop_index("ix_feature_snapshot_endpoint")
         batch.drop_index("ix_feature_snapshot_evidence_revision")

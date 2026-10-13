@@ -205,11 +205,27 @@ export function RiskBandLabel({ p }: { p: number | null | undefined }) {
 /* ── Tables ─────────────────────────────────────────────────────────────── */
 
 export function Th({
-  children, className, align = "left", scope = "col",
-}: { children: ReactNode; className?: string; align?: "left" | "right" | "center"; scope?: "col" | "row" }) {
+  children, className, align = "left", scope = "col", ariaSort,
+}: {
+  children: ReactNode;
+  className?: string;
+  align?: "left" | "right" | "center";
+  scope?: "col" | "row";
+  /**
+   * Sort state for a sortable column.
+   *
+   * `aria-sort` is only valid on an element with the `columnheader` role, so it
+   * belongs here on the `<th>` — not on a `<button>` inside it, where it was
+   * previously set and where assistive technology ignores it. That meant a
+   * screen-reader user could operate the sort control and never be told which
+   * column was sorted or in which direction.
+   */
+  ariaSort?: "ascending" | "descending" | "none";
+}) {
   return (
     <th
       scope={scope}
+      aria-sort={ariaSort}
       className={clsx(
         "whitespace-nowrap border-b border-[var(--border-strong)] px-3 py-2",
         "text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-500",

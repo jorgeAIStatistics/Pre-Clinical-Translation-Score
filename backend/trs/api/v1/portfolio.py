@@ -38,9 +38,18 @@ def get_portfolio(
     modality: str | None = None,
     target: str | None = None,
     limit: int = Query(default=200, le=500),
+    offset: int = Query(default=0, ge=0),
     score: bool = Query(
         default=True,
         description="Compute a live estimate per row. Disable for a fast listing.",
+    ),
+    demo_context: bool = Query(
+        default=False,
+        description=(
+            "Required to obtain estimates from a model trained on synthetic "
+            "demonstration data. Without it, rows come back with a null "
+            "probability and a refusal reason."
+        ),
     ),
 ) -> PortfolioResponse:
     stmt = (
@@ -64,7 +73,21 @@ def get_portfolio(
             func.lower(Target.symbol) == target.lower()
         )
 
-    records = list(session.execute(stmt.order_by(Program.name).limit(limit)))
+    # The count runs against the same filtered statement, so the denominator
+    # cannot drift from the rows.
+    total_matching = int(
+        session.scalar(
+            select(func.count()).select_from(stmt.order_by(None).subquery())
+        )
+        or 0
+    )
+    records = list(
+        session.execute(
+            stmt.order_by(Program.name, Indication.name, ProgramIndication.id)
+            .offset(offset)
+            .limit(limit)
+        )
+    )
     track_ids = [t.id for t, _, _ in records]
     evidence_counts = dict(
         session.execute(
@@ -120,11 +143,14 @@ def get_portfolio(
                 result = service.score_track(
                     track.id, endpoint=endpoint, persist=False,
                     n_imputations=8, n_param_samples=150, compare_families=False,
+                    demo_context=demo_context,
                 )
                 top = None
                 if result.explanation and result.explanation["increasing_risk"]:
                     top = result.explanation["increasing_risk"][0]
                 row.update({
+                    "score_permitted": result.eligibility.get("permitted"),
+                    "refusal_code": result.eligibility.get("refusal_code"),
                     "probability": result.probability,
                     "interval_low": result.interval_low,
                     "interval_high": result.interval_high,
@@ -139,6 +165,35 @@ def get_portfolio(
 
         rows.append(PortfolioRow.model_validate(row))
 
+    scored = [r for r in rows if r.probability is not None]
+    widths = [
+        r.interval_high - r.interval_low
+        for r in scored
+        if r.interval_high is not None and r.interval_low is not None
+    ]
+    page_summary = {
+        "scope": "this_page_only",
+        "n_rows_on_page": len(rows),
+        "n_scored_on_page": len(scored),
+        "n_refused_on_page": sum(
+            1 for r in rows if getattr(r, "score_permitted", None) is False
+        ),
+        "mean_probability": (
+            sum(r.probability for r in scored) / len(scored) if scored else None
+        ),
+        "mean_interval_width": (sum(widths) / len(widths) if widths else None),
+        "n_low_confidence_on_page": sum(
+            1 for r in rows
+            if r.evidence_confidence in ("low", "very_low")
+        ),
+        "note": (
+            "These summaries describe the rows on this page, not the "
+            f"{total_matching} programmes matching the current filters. "
+            "Scoring every match on each request would mean hundreds of "
+            "Monte-Carlo runs per page load."
+        ),
+    }
+
     project = session.get(Project, project_id) if project_id else None
     endpoint_def = ENDPOINTS[endpoint]
     is_demo = any_synthetic or bool(artifact and artifact.trained_on_synthetic)
@@ -150,7 +205,12 @@ def get_portfolio(
         endpoint=endpoint,
         estimand=endpoint_def.estimand,
         rows=rows,
-        total=len(rows),
+        n_returned=len(rows),
+        total_matching=total_matching,
+        page_offset=offset,
+        page_limit=limit,
+        has_more=offset + len(rows) < total_matching,
+        page_summary=page_summary,
         is_demonstration=is_demo,
         demonstration_note=(
             "DEMONSTRATION PORTFOLIO — programs, evidence and outcomes are "

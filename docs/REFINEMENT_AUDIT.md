@@ -283,27 +283,35 @@ this path, so it is not an edge case — it is the only calibration path in use.
 **Fix.** State the limitation in the artifact; offer forward-chaining OOF
 calibration and report which was used.
 
-### D11 — Portfolio summaries and the displayed denominator disagree (medium)
+### D11 — `total` is a page count presented as a portfolio count (medium)
 
-`frontend/app/page.tsx:11-22,38`:
+**This entry is a correction.** The first version of this audit claimed the
+portfolio page computed its means over 60 rows while displaying the full cohort
+count of 552 — "two denominators, one panel". That was wrong, and the wrong
+version was committed. `backend/trs/api/v1/portfolio.py:153` returned
+`total=len(rows)`, so with `limit: 60` the field reported **60**: the two
+denominators agreed. Verified by counting the filtered set directly (765
+matching tracks) against what the endpoint would report (60).
 
-```tsx
-const portfolio = await api.portfolio({ limit: 60, score: true });
-const scored = portfolio.rows.filter((r) => r.probability !== null);
-const meanRisk = scored.length ? scored.reduce(...) / scored.length : ...
-...
-<Stat label="Programs" value={portfolio.total} />
-```
+The actual defect is worse than the one I described. The field was *named*
+`total`, which every consumer reads as the portfolio size; it was the page
+size. There was no `offset` parameter and no pagination control, so **705 of
+765 programmes were unreachable through the interface, with nothing to indicate
+they existed.** And `frontend/app/page.tsx` introduced the honesty problem the
+API had merely enabled, describing its 60-row view as:
 
-Means and the low-confidence count are computed over at most 60 returned rows;
-the headline count displays the full cohort (552). Two denominators, one panel.
+> Translational-risk estimates for every program in the portfolio
 
-**Fix.** Either label the summaries page-level explicitly, or compute genuine
-server-side portfolio-wide aggregates. Disclose differing assessment dates and
-refuse to aggregate incompatible endpoints.
+**Fix.** Replace `total` with `n_returned` and `total_matching` (counted from
+the same filtered statement, so it cannot drift from the rows), add
+`offset`/`has_more` and a server-computed `page_summary` whose own payload
+declares `scope: "this_page_only"` and names the portfolio-level denominator it
+is not describing. Add addressable server-rendered pagination to the page, and
+state the visible row range beside the summaries.
 
 **Regression test.** Pagination and summary must agree about their denominator
-and scope.
+and scope; consecutive pages must not overlap; `total_matching` must not move
+with the page.
 
 ### D12 — The declared frontend lint script does not run (low)
 
@@ -401,3 +409,7 @@ These are real and must survive the refactor:
 - **`backend/artifacts/ptrs-pef-001.json` is present** (520,835 bytes) and loads
   with a matching SHA-256. An earlier pass of this audit reported it missing;
   that was a truncated `ls`, not a defect.
+- **The portfolio's summary denominators did agree with each other.** The first
+  committed version of D11 said they did not. See the correction in D11: the
+  real defect was a misnamed field and 705 unreachable programmes, not
+  mismatched arithmetic.

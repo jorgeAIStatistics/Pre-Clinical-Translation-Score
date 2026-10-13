@@ -203,9 +203,9 @@ def materialise_snapshot(
                 f"BUILDER_VERSION changing (currently {BUILDER_VERSION!r}). "
                 "Bump the builder version rather than overwriting history."
                 + (
-                    f" This snapshot is referenced by at least one score "
-                    f"record, so overwriting it would retroactively change a "
-                    f"delivered assessment."
+                    " This snapshot is referenced by at least one score "
+                    "record, so overwriting it would retroactively change a "
+                    "delivered assessment."
                     if referenced
                     else " No score references this snapshot yet, but the "
                     "builder discrepancy is still a defect."

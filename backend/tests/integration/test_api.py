@@ -1243,3 +1243,104 @@ def test_explanation_is_checked_against_the_served_number(
     assert explanation["served_reconstruction_error"] == pytest.approx(0.0, abs=1e-9)
     assert explanation["explained_quantity"] == "calibrated_plug_in"
     assert explanation["explained_quantity_description"].strip()
+
+
+def test_portfolio_pagination_and_summary_agree_about_scope(
+    client: TestClient, api_env: ApiEnv
+) -> None:
+    """If this breaks, a page-level mean is read as a portfolio-level one.
+
+    The response field was previously named `total` and returned `len(rows)` —
+    the page size — so a caller asking for 60 rows was told the portfolio held
+    60 programmes when it held 765, with no indication the other 705 existed.
+    The page then described its 60-row mean as covering "every program in the
+    portfolio".
+
+    Three properties are asserted together, because each is useless alone: the
+    portfolio-level count is independent of pagination, the page-level count is
+    not, and the summary block says which of the two it describes.
+    """
+    first = client.get(
+        "/api/v1/portfolio", params={"limit": 5, "offset": 0, "score": False}
+    )
+    assert first.status_code == 200, first.text
+    a = first.json()
+
+    assert a["n_returned"] == len(a["rows"]) == 5
+    assert a["total_matching"] > a["n_returned"], (
+        "this fixture does not have enough programmes to test pagination"
+    )
+    assert a["page_offset"] == 0
+    assert a["page_limit"] == 5
+    assert a["has_more"] is True
+
+    summary = a["page_summary"]
+    assert summary["scope"] == "this_page_only"
+    assert summary["n_rows_on_page"] == a["n_returned"]
+    assert str(a["total_matching"]) in summary["note"], (
+        "the summary does not disclose the portfolio-level denominator it is "
+        "*not* describing"
+    )
+
+    # The portfolio-level count must not move with the page.
+    second = client.get(
+        "/api/v1/portfolio", params={"limit": 5, "offset": 5, "score": False}
+    ).json()
+    assert second["total_matching"] == a["total_matching"]
+    assert second["page_offset"] == 5
+    assert {r["track_id"] for r in second["rows"]}.isdisjoint(
+        {r["track_id"] for r in a["rows"]}
+    ), "consecutive pages overlap, so the ordering is not stable under offset"
+
+    # Walking off the end yields no rows and no further pages, and still
+    # reports the same denominator.
+    tail = client.get(
+        "/api/v1/portfolio",
+        params={"limit": 5, "offset": a["total_matching"], "score": False},
+    ).json()
+    assert tail["rows"] == []
+    assert tail["has_more"] is False
+    assert tail["total_matching"] == a["total_matching"]
+
+
+def test_portfolio_rows_report_refusal_rather_than_a_silent_null(
+    client: TestClient, api_env: ApiEnv
+) -> None:
+    """If this breaks, "not scored" and "refused" are indistinguishable.
+
+    A null probability has two quite different causes: scoring was not
+    requested, or it was requested and declined. A client that cannot tell them
+    apart will render an empty cell for both.
+    """
+    if api_env.model_version is None:
+        pytest.skip(f"no model artifact: {api_env.model_error}")
+
+    unscored = client.get(
+        "/api/v1/portfolio", params={"limit": 3, "score": False}
+    ).json()
+    for row in unscored["rows"]:
+        assert row["probability"] is None
+        assert row["score_permitted"] is None, (
+            "a row that was never scored claims a permission decision"
+        )
+
+    refused = client.get(
+        "/api/v1/portfolio",
+        params={"limit": 3, "score": True, "demo_context": False},
+    ).json()
+    assert refused["page_summary"]["n_refused_on_page"] == len(refused["rows"])
+    for row in refused["rows"]:
+        assert row["probability"] is None
+        assert row["score_permitted"] is False
+        assert row["refusal_code"] == "demo_context_not_selected"
+
+    permitted = client.get(
+        "/api/v1/portfolio",
+        params={"limit": 3, "score": True, "demo_context": True},
+    ).json()
+    assert permitted["page_summary"]["n_refused_on_page"] == 0
+    assert permitted["page_summary"]["n_scored_on_page"] == len(permitted["rows"])
+    for row in permitted["rows"]:
+        assert row["score_permitted"] is True
+        assert row["probability"] is not None
+        assert 0.0 <= row["probability"] <= 1.0

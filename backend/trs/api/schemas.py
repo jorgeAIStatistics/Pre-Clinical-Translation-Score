@@ -394,9 +394,14 @@ class PortfolioRow(ApiModel):
     sponsor: str | None = None
     stage: str
     as_of_date: dt.date
+    #: null both when scoring was not requested and when it was refused.
+    #: `score_permitted` distinguishes the two.
     probability: float | None = None
     interval_low: float | None = None
     interval_high: float | None = None
+    #: null when scoring was not requested; false when it was refused.
+    score_permitted: bool | None = None
+    refusal_code: str | None = None
     evidence_confidence: str | None = None
     completeness: float | None = None
     top_risk_driver: str | None = None
@@ -414,7 +419,23 @@ class PortfolioResponse(ApiModel):
     endpoint: str
     estimand: str
     rows: list[PortfolioRow]
-    total: int
+    #: Rows on this page. Formerly misnamed `total`, which reported
+    #: `len(rows)` — the page size — while reading as the portfolio size, so
+    #: 705 of 765 programmes were invisible with no indication that they
+    #: existed.
+    n_returned: int
+    #: Programmes matching the active filters, independent of pagination. This
+    #: is the portfolio-level denominator.
+    total_matching: int
+    page_offset: int
+    page_limit: int
+    has_more: bool
+    #: Summaries over the rows **on this page**, not the whole portfolio.
+    #: Scoring every matching programme on each request would mean hundreds of
+    #: Monte-Carlo runs per page load, so these are page-level by design and
+    #: say so in their own payload rather than being presented as portfolio
+    #: aggregates by a caller that cannot tell the difference.
+    page_summary: dict[str, Any] = Field(default_factory=dict)
     is_demonstration: bool
     demonstration_note: str | None = None
     model_usefulness: dict[str, Any] = Field(default_factory=dict)
