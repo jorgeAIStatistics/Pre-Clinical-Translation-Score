@@ -324,7 +324,7 @@ finds the constant only in its own definition and in the docstring that describe
 it (`trs/ontology/enums.py` lines 605 and 617). No filter in `trs/cohort/build.py`,
 `trs/features/builder.py` or `trs/pipeline/features.py` excludes rows carrying it.
 
-The practical exposure is currently zero — all 5,444 `evidence_item` rows in this
+The practical exposure is currently zero — all 5,273 `evidence_item` rows in this
 database carry `provenance_method = synthetic_generator`, and no ingestion path
 ever writes the forbidden value. But the guard described in the docstring does
 not exist, and anyone connecting a real extraction pipeline must add it. The
@@ -487,9 +487,9 @@ unchanged input.
 Measured 2026-09-24 by running:
 
 ```bash
-cd /Users/jorgerodriguez/Desktop/Bioinformatics/backend && \
+cd backend && \
   TRS_ALLOW_LIVE_NETWORK=true \
-  /Users/jorgerodriguez/Desktop/Bioinformatics/.venv/bin/python -m trs.cli connectors
+  ../.venv/bin/python -m trs.cli connectors
 ```
 
 | Connector | Status reported | Latency | Detail (verbatim from the probe) |
@@ -658,8 +658,8 @@ This section is the one to read before quoting anything from a screenshot.
 | Sponsors | 25 | `is_synthetic = True`; named after mountain ranges and rivers so they cannot be confused with real companies |
 | Programs | 600 | `is_synthetic = True`; every program code prefixed `DEMO-` |
 | Compounds | 600 | `is_synthetic = True` |
-| Development tracks (`program_indication`) | 785 | `is_synthetic = True` |
-| Evidence items | 5,444 | `is_synthetic = True`, `provenance_method = synthetic_generator` |
+| Development tracks (`program_indication`) | 765 | `is_synthetic = True` |
+| Evidence items | 5,273 | `is_synthetic = True`, `provenance_method = synthetic_generator` |
 | Sources | 90 | `is_synthetic = True`, `source_type = synthetic_demonstration`, titled `[SYNTHETIC RECORD nnn]`, **`pmid` / `doi` / `url` all NULL** |
 | PK/PD bridges | 474 | `is_synthetic = True` |
 | Program biomarkers | 506 | `is_synthetic = True` |
@@ -828,21 +828,21 @@ virtualenv. Every command below was run while writing this document.
 
 ```bash
 # Connector catalogue — names, versions, homepages, licence notes
-cd /Users/jorgerodriguez/Desktop/Bioinformatics/backend && \
-  /Users/jorgerodriguez/Desktop/Bioinformatics/.venv/bin/python -m trs.cli connectors --list
+cd backend && \
+  ../.venv/bin/python -m trs.cli connectors --list
 
 # Live health probe of every connector (§7.1)
-cd /Users/jorgerodriguez/Desktop/Bioinformatics/backend && \
+cd backend && \
   TRS_ALLOW_LIVE_NETWORK=true \
-  /Users/jorgerodriguez/Desktop/Bioinformatics/.venv/bin/python -m trs.cli connectors
+  ../.venv/bin/python -m trs.cli connectors
 
 # Connector test suite — normalise() against stored fixtures, no network
-cd /Users/jorgerodriguez/Desktop/Bioinformatics/backend && \
-  /Users/jorgerodriguez/Desktop/Bioinformatics/.venv/bin/python -m pytest tests -q
+cd backend && \
+  ../.venv/bin/python -m pytest tests -q
 
 # Regenerate the synthetic corpus (destructive: changes every hash)
-cd /Users/jorgerodriguez/Desktop/Bioinformatics/backend && \
-  /Users/jorgerodriguez/Desktop/Bioinformatics/.venv/bin/python -m trs.cli seed \
+cd backend && \
+  ../.venv/bin/python -m trs.cli seed \
   --programs 600 --seed 20240917
 ```
 
@@ -877,13 +877,13 @@ not modify code. Items 1, 3, 4 and 6 also appear, from the modelling side, in
    catches it.** This is the most consequential gap on the list, because the
    `AsOfContext` invariant is what every reported performance number rests on.
 4. **`cohort_entry.split` / `split_fold` are never written.** Documented as
-   "Assigned by `trs.validation.splitters`"; all 571 rows have `split = NULL`.
+   "Assigned by `trs.validation.splitters`"; all 552 rows have `split = NULL`.
    The split is computed in memory during training and discarded, so a historical
    partition cannot be recovered from the database.
 5. **`backend/trs/schemas/` is an empty directory.** The API's Pydantic models
    live in `trs/api/schemas.py`; the top-level package appears to be a vestige.
 6. **15 orphan feature snapshots.** `feature_snapshot` holds 586 rows for 586
-   distinct tracks; the cohort has 571 entries, all of which have a snapshot.
+   distinct tracks; the cohort has 552 entries, all of which have a snapshot.
    The extra 15 belong to tracks outside the cohort — benign residue from an
    earlier run, but it means a snapshot count is not a cohort count.
 7. **Six target rows carry a protein alias where an HGNC symbol is asserted.**

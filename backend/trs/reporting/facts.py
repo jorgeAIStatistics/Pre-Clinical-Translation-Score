@@ -106,6 +106,63 @@ def fact_sheet(session: Session) -> dict[str, Any]:
             "trained_on_synthetic": artifact.trained_on_synthetic,
             "grouping": ed.get("grouping", {}),
             "split_sizes": ed.get("sizes", {}),
+            # The protocol governs how every metric below may be read, so it
+            # is reported before them rather than in a footnote.
+            "protocol": {
+                "name": (m.get("protocol", {}).get("split_manifest", {})
+                         .get("protocol")),
+                "permits_deployment_claim": (
+                    m.get("protocol", {}).get("split_manifest", {})
+                    .get("permits_deployment_claim")
+                ),
+                "manifest_hash": (m.get("protocol", {}).get("split_manifest", {})
+                                  .get("manifest_hash")),
+                "fitting_origin": (
+                    m.get("protocol", {}).get("split_manifest", {})
+                    .get("dates", {}).get("fitting_origin")
+                ),
+                "label_cutoff": (
+                    m.get("protocol", {}).get("split_manifest", {})
+                    .get("dates", {}).get("label_cutoff")
+                ),
+                "data_cutoff": (
+                    m.get("protocol", {}).get("split_manifest", {})
+                    .get("dates", {}).get("data_cutoff")
+                ),
+                "label_maturity": (
+                    m.get("protocol", {}).get("split_manifest", {})
+                    .get("label_maturity")
+                ),
+                "rejected": [
+                    t.get("protocol")
+                    for t in m.get("protocol", {}).get("protocol_trace", [])
+                    if "rejected_because" in t
+                ],
+                "n_folds": len(m.get("protocol", {}).get("folds", [])),
+            },
+            "status": {
+                k: m.get("status", {}).get(k)
+                for k in ("status", "may_serve", "criteria_version")
+            },
+            "prediction_contract": m.get("prediction_contract", {}),
+            "reference_model": {
+                k: m.get("reference_model", {}).get(k)
+                for k in ("kind", "prediction", "evaluation_prevalence")
+            },
+            "skill_vs_deployable_reference": {
+                k: (pm.get("reference") or {}).get(k)
+                for k in (
+                    "reference_value", "brier_skill", "log_loss_skill",
+                    "model_better_than_reference",
+                )
+            },
+            "calibration_scale_audit": {
+                k: m.get("calibration_audit", {}).get(k)
+                for k in (
+                    "verdict", "pool_observed_rate", "development_observed_rate",
+                    "mean_logit_shift",
+                )
+            },
             "calibration": {
                 k: m.get("calibration_selection", {}).get(k)
                 for k in ("method", "design", "n_out_of_fold_predictions")

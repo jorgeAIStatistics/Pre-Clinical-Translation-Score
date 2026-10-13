@@ -502,8 +502,8 @@ analysis. Mechanism class is *never* a grouping key, because the transitive clos
 the cohort and because it would remove from training exactly the class-level knowledge a real analyst
 possesses at the decision point.
 
-On the demonstration cohort this yields 466 connected components from 571 rows under identity scope,
-largest component 3, 374 singletons. Under the strict (target-inclusive) scope the same 571 rows
+On the demonstration cohort this yields 465 connected components from 552 rows under identity scope,
+largest component 3, 390 singletons. Under the strict (target-inclusive) scope the same 552 rows
 collapse to 42 components with a largest of 23 — which is why the strict scope cannot be combined
 with a temporal split and is reported as a cross-sectional sensitivity analysis instead.
 
@@ -537,20 +537,20 @@ This section is a map, not a specification; the substance is in
 
 ### The deployed model, on demonstration data
 
-Read from `backend/artifacts/ptrs-pef-001.json`. **All of these describe a simulation.**
+Read from `backend/artifacts/ptrs-pef-004.json`. **All of these describe a simulation.**
 
 | | |
 | --- | --- |
-| Dataset | 600 programs → 785 development tracks → 5,444 evidence items |
-| Cohort | 785 candidates → 571 included (335 positive, 58.7%), 214 excluded with recorded reasons |
-| Split | Temporal at 2017-12-23; train 422, test 149, **12 rows dropped**. A component whose rows straddle the boundary is assigned wholly to the *later* partition and its earlier rows are discarded — the conservative direction, since it removes rows from training rather than letting future-resolved siblings inform an earlier prediction |
-| Selected family | `l2_logistic`; penalty 128.0 chosen from a grid spanning 0.25–2048 |
-| Rejected | `gbdt` (slope 1.452) and `hierarchical_logistic` (slope 0.776) — both disqualified on the calibration gate, neither on discrimination |
-| Held-out | AUROC 0.630 [0.537, 0.720] · Brier 0.238 · log loss 0.671 · calibration slope 0.733 · intercept −0.229 · ECE 0.098 |
+| Dataset | 600 programs → 765 development tracks → 5,273 evidence items |
+| Cohort | 765 candidates → 552 included (325 positive, 58.9%), 213 excluded with recorded reasons |
+| Split | Protocol `temporal_outer_maturity` at 2017-09-04; development 187, evaluation 127, **238 rows purged** (202 label-immature, 24 unresolved at the data cutoff, 12 component-straddling). A component whose rows straddle the boundary is assigned wholly to the *later* partition and its earlier rows are discarded — the conservative direction, since it removes rows from training rather than letting future-resolved siblings inform an earlier prediction |
+| Selected family | `l2_logistic`; penalty 64.0 chosen from a grid spanning 0.25–2048, on development forward-chaining folds |
+| Rejected | `gbdt` (slope 0.711, disqualified on the calibration band) and `hierarchical_logistic` (missed the 2% margin) — judged on development out-of-fold predictions, not on the evaluation gate, neither on discrimination |
+| Evaluation (read once) | AUROC 0.622 [0.515, 0.718] · Brier 0.263 · log loss 0.731 · calibration slope 0.851 · intercept −0.778 · ECE 0.098 |
 | Skill vs base rate | scaled Brier **+0.035 [−0.065, +0.112]** — interval includes zero |
 | Verdict emitted by the platform | `not_distinguishable_from_base_rate` |
-| Oracle ceiling (simulation ground truth) | AUROC 0.737 · log loss 0.592 (base-rate log loss 0.678) |
-| Target-grouped sensitivity | AUROC 0.601 vs headline 0.630 |
+| Oracle ceiling (simulation ground truth) | AUROC 0.782 · log loss 0.549 (base-rate log loss 0.677) |
+| Target-grouped sensitivity | AUROC 0.642 vs headline 0.622 |
 | Interval honesty check | analytic Laplace widths / bootstrap-refit widths: median 1.88 (p10 1.55, p90 2.44) → `analytic_intervals_too_wide` |
 
 Two of these deserve emphasis because they are the kind of number a product usually hides. The
@@ -771,7 +771,7 @@ In the order the limits would actually be hit.
 | 4 | **Ingestion is synchronous and single-process** | A full sweep across six sources is wall-clock bound by the slowest, and a crash loses the run | A task queue (Celery/RQ/arq) with `connector_run` as the existing job ledger — the status and counter columns are already there. |
 | 5 | **Scoring rebuilds features per request** | Latency grows with evidence volume per track | Serve from `feature_snapshot` when `(track, as_of, schema_version)` matches and the evidence set is unchanged. The uniqueness constraint already makes the cache key well-defined. |
 | 6 | **`raw_record.content_bytes` in-row** | The table dominates database size | Move payloads to object storage, keep the hash and a pointer. `content_hash` is already the identity. |
-| 7 | **Training is single-machine, in-memory** | Bounded by RAM at roughly 10⁵–10⁶ rows × ~100 design columns | Out-of-core or distributed fitting. Not close — the demonstration cohort is 571 rows, and the binding constraint on this problem is *sample size*, not compute. |
+| 7 | **Training is single-machine, in-memory** | Bounded by RAM at roughly 10⁵–10⁶ rows × ~100 design columns | Out-of-core or distributed fitting. Not close — the demonstration cohort is 552 rows, and the binding constraint on this problem is *sample size*, not compute. |
 | 8 | **No read replicas / no per-tenant sharding** | Analytical queries compete with serving | Standard Postgres read replicas; `organization_id` is already on every private table, so tenant sharding has a key if it is ever needed. |
 
 Two things deliberately do **not** appear on that list. The feature schema is versioned
@@ -797,8 +797,8 @@ Each row: the decision, the alternative that was rejected, why, and what it cost
 | **ADR-008** | `normalise()` is pure and does no I/O | Combined fetch-and-parse per source | CI for a system whose inputs are six third-party APIs. Fixtures make parsing testable offline. | Two-stage code; an intermediate `RawPayload` type |
 | **ADR-009** | Connector adapters behind one ABC | Direct API calls at each use site | Six sources fail in six different ways. One outage degrades one connector. A commercial feed drops in as a sibling class. | Boilerplate per source; the abstraction must fit both REST and GraphQL |
 | **ADR-010** | Alias tables with `match_method` + `match_confidence`, plus a decision log | A synonym column; or silent canonical-name merging | Duplicate programs put the same biology in train and test, which is invisible in the outputs. Storing *how* a link was made is what makes a bad merge reversible. | Five extra tables; resolution must write a decision row for every link |
-| **ADR-011** | Connected-component grouping for splits; identity scope for the headline | Random k-fold; or grouping on mechanism class | Random splitting on this problem is not merely optimistic, it is meaningless. Mechanism-class grouping collapses the cohort and removes knowledge a real analyst has. | 12 of 571 demonstration rows dropped at the temporal boundary; folds are coarse |
-| **ADR-012** | `l2_logistic` as the deployed default | `gbdt` on discrimination | The L2 penalty *is* a Gaussian prior, so the fit is a MAP estimate with a defensible Laplace posterior, and the log-odds is an exact additive sum that the explanation layer can assert. A tree ensemble has neither. Both challengers were run and both failed the calibration gate anyway (slopes 1.452 and 0.776). | No interactions unless declared; likely a small discrimination cost on a larger cohort |
+| **ADR-011** | Connected-component grouping for splits; identity scope for the headline | Random k-fold; or grouping on mechanism class | Random splitting on this problem is not merely optimistic, it is meaningless. Mechanism-class grouping collapses the cohort and removes knowledge a real analyst has. | 12 of 552 demonstration rows dropped at the temporal boundary; folds are coarse |
+| **ADR-012** | `l2_logistic` as the deployed default | `gbdt` on discrimination | The L2 penalty *is* a Gaussian prior, so the fit is a MAP estimate with a defensible Laplace posterior, and the log-odds is an exact additive sum that the explanation layer can assert. A tree ensemble has neither. Both challengers were run on development out-of-fold predictions: `gbdt` failed the calibration gate (slope 0.711) and `hierarchical_logistic` missed the 2% improvement margin. | No interactions unless declared; likely a small discrimination cost on a larger cohort |
 | **ADR-013** | Log loss as the selection criterion, with a calibration-slope gate | AUROC | The product's output is a probability a committee reads as a number. AUROC is invariant to monotone distortion of probabilities — precisely the failure this product must avoid. | A model that ranks better can lose |
 | **ADR-014** | Cross-validated out-of-fold calibration on the training partition | A dedicated three-way train/calibrate/test split | On a few hundred programs, a temporal calibration slice is a narrow window whose idiosyncrasies the calibrator learns. In development that produced a held-out slope of 0.53. | Out-of-fold predictions are marginally less sharp than the final model, so the calibrator over-corrects slightly. Documented in the artifact rather than corrected |
 | **ADR-015** | Development auth fallback, hard-gated by `assert_production_safety()` at app start | No fallback (login flow required in dev); or a fallback with no guard | Without it, the first-run experience requires a login flow before anything can be seen. Without the guard, it is how auth ends up disabled in production. | Checks `TRS_ENV`, so it stops the realistic mistake, not a deliberate one |

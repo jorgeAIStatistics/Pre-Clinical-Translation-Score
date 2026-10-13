@@ -1,4 +1,4 @@
-# Model Card — `ptrs-pef-001`
+# Model Card — `ptrs-pef-004`
 
 **Preclinical Translational Risk Scorer**, primary endpoint `ph2_efficacy_failure`.
 
@@ -36,20 +36,26 @@ from, how it is tracked, and exactly what is real versus simulated here.
 
 | Field | Value | Source of truth |
 |---|---|---|
-| Model version | `ptrs-pef-001` | `model_artifact.version` |
+| Model version | `ptrs-pef-004` | `model_artifact.version` |
 | Active in registry | `true` | `model_artifact.is_active` |
 | Package version | `trs 0.1.0` | `trs/__init__.py` |
 | Model family | `l2_logistic` | `trs/modeling/logistic.py` |
 | Endpoint | `ph2_efficacy_failure` | `trs/cohort/outcomes.py` |
 | Feature schema version | `fs-1.0.0` | `trs/features/spec.py` |
-| Cohort version id | `01M39NEJKFNVWRGQ1Z3416GMTS` | `cohort_version.id` |
+| Cohort version id | `01M39QGBG4S645QRPJRRVHH3C1` | `cohort_version.id` |
 | Cohort name / version | `oncology_ph2_efficacy` / `v1` | `cohort_version` |
-| Cohort dataset hash | `461d8d0eabef466c0afe3585117bc8ec04efe4f22ad0acd4c50459731b53fb0e` | `cohort_version.dataset_hash` (SHA-256 over the cohort definition plus sorted `(track, as_of, label)` members) |
-| Training-matrix hash | `906f7f211635e626aaeb8ef476d1cc3b022ba5ffd5d84875a84ba28d61c01686` | `model_artifact.dataset_hash` (SHA-256 over columns, `X` rounded to 1e-10, and `y`) |
-| Cohort built at | `2026-09-24T12:15:08.398349+00:00` | `cohort_version.built_at` |
-| Trained at | `2026-09-24T12:16:43.401197+00:00` | `model_artifact.trained_at` |
+| Cohort dataset hash | `92cd561dfbbe222fa1cc8ff741058cbdec2cde226fc2af53a8b3072ebe331c1e` | `cohort_version.dataset_hash` (SHA-256 over the cohort definition plus sorted `(track, as_of, label)` members) |
+| Training-matrix hash | `2aee684d46c1a413ee09ea30374c29011fae68e94277f5f7142dbb95dbff150b` | `model_artifact.dataset_hash` (SHA-256 over columns, `X` rounded to 1e-10, and `y`) |
+| Cohort built at | `2026-09-24T12:51:03.811594+00:00` | `cohort_version.built_at` |
+| Trained at | `2026-10-13T23:10:43.416456+00:00` | `model_artifact.trained_at` |
 | `trained_on_synthetic` | `true` | `model_artifact.trained_on_synthetic` |
-| Git commit | `null` | `model_artifact.git_commit` — the working tree had no commits when training ran, so `git rev-parse HEAD` returned non-zero and the field is honestly empty rather than guessed |
+| **Status** | **`demo_only`** | `model_artifact.status`, derived by `trs/pipeline/status.py` against criteria `pc-1.0.0` |
+| May this artifact serve a score? | Only for synthetic evidence, in an explicitly selected demonstration context | `SERVING_PERMITTED` + `check_eligibility()` |
+| Split protocol | `temporal_outer_maturity` | `model_artifact.protocol` |
+| Split manifest hash | `165cb164f07e…` | `metrics.protocol.split_manifest.manifest_hash` |
+| Served prediction functional | `calibrated_plug_in` | `model_artifact.prediction_functional`, contract `pcx-1.0.0` |
+| Artifact payload format | `2` | format `1` artifacts still load, with denying defaults |
+| Git commit | `4e55da097a9b4035da94c25d86cdfafcf3a3c9aa` | `model_artifact.git_commit` — the commit the training run was made from. Earlier artifacts recorded `null` because the working tree had no commits yet, which the field reported honestly rather than guessing |
 
 Two hashes exist because they answer different questions. The cohort hash
 answers "is this the same set of labelled units?"; the training-matrix hash
@@ -83,8 +89,8 @@ neither, and on this data it did not earn the trade.
 | — numeric / ordinal features | 61 |
 | — missing indicators | 36 |
 | — one-hot columns (2 nominal features) | 12 |
-| Training rows | 422 (252 positive) |
-| L2 penalty | 128.0 |
+| Development rows | 187 (118 positive) |
+| L2 penalty | 64.0 |
 | `max_iter` / `tol` | 500 / 1e-8 |
 | `class_weight_balanced` | `false` |
 | Converged | `true`, in 4 IRLS iterations |
@@ -107,7 +113,7 @@ variance/bias trade that is right at n in the hundreds, not as a fact.
 | Method | logistic recalibration |
 | Design | cross-validated out-of-fold |
 | Folds | 5, grouped by connected component, over the training partition only |
-| Rows used | 422 out-of-fold predictions |
+| Rows used | 187 out-of-fold predictions (grouped, full coverage) |
 | Fitted slope | 1.0360 |
 | Fitted intercept | -0.0336 |
 | Parameter uncertainty propagated | yes |
@@ -124,8 +130,8 @@ conservatism, not a neutral choice.
 
 Two further artifacts were trained on the identical matrix and registered
 inactive, so the comparison in §[7.5](#75-model-family-selection) is auditable
-rather than asserted: `ptrs-pef-001-alt-hierarchical_logistic` and
-`ptrs-pef-001-alt-gbdt`.
+rather than asserted: `ptrs-pef-004-alt-hierarchical_logistic` and
+`ptrs-pef-004-alt-gbdt`.
 
 ---
 
@@ -236,40 +242,62 @@ skill against the cohort base rate), not AUROC.
 
 | Property | Value |
 |---|---|
-| Split | Temporal, forward. Train as-of ≤ 2017-12-23; test after. |
+| Split protocol | **`temporal_outer_maturity`** (`trs/validation/protocol.py`) |
+| May these numbers be called deployment performance? | **No** — `permits_deployment_claim = false` |
+| Protocol rejected first | `strict_temporal`, with the measured reason recorded |
+| Split manifest hash | `165cb164f07e18e7efc37ae6f033ba9def25edecab7db65318a0bf6f13ab72f4` |
+| Assessment boundary | 2017-09-04 (76th percentile of admissible as-of dates) |
+| Fitting origin = label cutoff | 2017-09-04 |
+| Corpus data cutoff | 2026-10-13 |
 | Grouping | Connected components, `identity` scope (keys: program, compound) |
-| Components / rows | 466 components from 571 rows; 374 singletons; largest component 3; median size 1 |
-| Train / calibration / test | 422 / 0 / 149 |
-| Rows reassigned across the boundary | 12 |
-| Test positives / prevalence | 83 / 0.5570 |
+| Components / rows | 465 components from 552 rows; 390 singletons; largest component 3; median size 1 |
+| Development / evaluation | 187 / 127 |
+| Rows with an out-of-fold selection prediction | 122 |
+| Purged — outcome unresolved at the data cutoff | 24 |
+| Purged — component straddled the assessment boundary | 12 |
+| Purged — label not knowable at the fitting origin | 202 |
+| Evaluation positives / prevalence | 70 / 0.5512 |
 | Bootstrap | 500 resamples, **unit = connected component**, 95% level |
 | Leakage audit | `clean: true` — 0 shared components, 0 shared programs, 0 shared compounds |
 
-Four things are worth stating plainly.
+Five things are worth stating plainly.
 
+- **The evaluation partition is read exactly once**, after the family,
+  hyperparameters, coefficients and calibrator are all fixed. Hyperparameter
+  selection, family selection and calibration consume development rows only, via
+  forward-chaining folds in which each fold fits its own feature transformer.
+  A regression test permutes the evaluation labels and requires the manifest
+  hash, chosen family, L2 penalty, encoder state, coefficients, intercept and
+  calibrator parameters to be bit-identical — and separately requires the
+  evaluation log loss to *change*, so it cannot pass vacuously.
+
+  The predecessor did not have this property. It passed the test labels to
+  `choose_family` and then reported the winner on those same rows, which made
+  every headline figure a selection-set figure.
+- **Label maturity is enforced, and it is expensive.** A development row's
+  outcome must have been knowable at the fitting origin. That purges 202 rows —
+  the single largest exclusion in the pipeline, and the reason development is
+  187 rows rather than ~400. The median outcome lag on this cohort is 5.3 years.
+  It also introduces a selection bias of its own, quantified in
+  §[8](#8-caveats-and-recommendations).
 - **No random split is reported anywhere.** The artifact says why: on this problem
   a random split would be optimistic by an unquantifiable margin.
-- **Confidence intervals are computed over 466 independent units, not 571 rows.**
+- **Confidence intervals are computed over 465 independent units, not 552 rows.**
   This widens every interval below, correctly.
-- **The 12 "dropped" rows were not discarded.** `temporal_split()` assigns a
-  component that straddles the boundary wholly to the *later* partition; the
-  counter named `dropped` counts rows whose partition changed. 422 + 149 = 571,
-  so every included row was scored. The effect is that 12 rows left training, not
-  the dataset. (The key name is misleading; see §[10.2](#102-known-defects-found-while-writing-this-card).)
-- **Informational overlap remains and is reported, not hidden:** 39 targets, 25
-  sponsors and 13 mechanism keys appear on both sides of the split. Target
-  overlap is addressed directly in §[7.4](#74-target-grouped-sensitivity).
+- **Informational overlap remains and is reported, not hidden:** targets,
+  sponsors and mechanism keys appear on both sides of the split. Target overlap
+  is addressed directly in §[7.4](#74-target-grouped-sensitivity).
 
-### 5.3 Held-out performance (149 rows, 83 positive)
+### 5.3 Evaluation-partition performance (127 rows, 70 positive)
 
 | Metric | Value | 95% CI (component bootstrap, 500 resamples) |
 |---|---|---|
-| AUROC | **0.630** | [0.537, 0.720] |
+| AUROC | **0.622** | [0.515, 0.718] |
 | AUPRC | 0.673 | [0.566, 0.792] |
 | Brier | **0.238** | [0.213, 0.265] |
-| Log loss | **0.671** | [0.613, 0.728] |
+| Log loss | **0.731** | [0.637, 0.825] |
 | **Scaled Brier (skill vs base rate)** | **+0.035** | **[-0.065, +0.112]** |
-| Calibration slope | 0.733 | [0.213, 1.390] |
+| Calibration slope | 0.851 | [0.165, 1.615] |
 | Calibration intercept | -0.229 | [-0.538, +0.127] |
 | ECE (10 quantile bins) | 0.098 | — |
 | MCE | 0.220 | — |
@@ -277,7 +305,7 @@ Four things are worth stating plainly.
 **The scaled-Brier interval includes zero.** That single fact governs how every
 other number on this page should be read.
 
-A calibration slope of 0.733 means the model's probabilities are **over-dispersed**:
+A calibration slope of 0.851 means the model's probabilities are **over-dispersed**:
 it is more confident than the data support, and the correct reading of an extreme
 score is that it should be shrunk toward the base rate.
 
@@ -289,22 +317,22 @@ generator actually used. Nothing can beat it.
 
 | Scorer | AUROC | Brier | Log loss |
 |---|---|---|---|
-| **Oracle** (true simulated probability) | **0.737** | 0.203 | **0.592** |
+| **Oracle** (true simulated probability) | **0.782** | 0.185 | **0.549** |
 | Cohort base rate (no covariates) | 0.500 by construction | 0.242 | 0.678 |
-| Fitted model, held-out | 0.630 | 0.238 | 0.671 |
+| Fitted model, locked evaluation | 0.622 | 0.263 | 0.731 |
 
 Mean true failure probability 0.5954, SD 0.2077.
 
 **An important caveat about this comparison, stated because it is easy to get
-wrong.** The oracle row is computed over all **571** included cohort entries
-(`trs oracle`), whereas the model row is computed over the **149**-row temporal
+wrong.** The oracle row is computed over all **552** included cohort entries
+(`trs oracle`), whereas the model row is computed over the **127**-row evaluation
 test partition. The split assignment is computed in memory during training and is
 not persisted to `cohort_entry.split` (§[10.2](#102-known-defects-found-while-writing-this-card)),
-so a like-for-like oracle on the same 149 rows cannot be recovered without a
+so a like-for-like oracle on the same 127 rows cannot be recovered without a
 retrain. The two rows are therefore **indicative, not a matched comparison.**
 
 With that caveat: the ceiling is far below 1.0 *by construction*, because outcomes
-are Bernoulli draws from the true probability. The gap between 0.630 and 0.737 is
+are Bernoulli draws from the true probability. The gap between 0.622 and 0.782 is
 the combined cost of measurement noise in the evidence, non-disclosure, finite
 sample and model misspecification. A demonstration dataset on which a model scored
 0.97 would be advertising a capability the product does not have.
@@ -316,19 +344,26 @@ because a 15-row bin cannot resolve much.
 
 | Bin | Mean predicted | Observed | n | Observed 95% CI |
 |---|---|---|---|---|
-| 0 | 0.353 | 0.333 | 15 | [0.152, 0.583] |
-| 1 | 0.441 | 0.467 | 15 | [0.248, 0.699] |
-| 2 | 0.507 | 0.333 | 15 | [0.152, 0.583] |
-| 3 | 0.574 | 0.467 | 15 | [0.248, 0.699] |
-| 4 | 0.615 | 0.600 | 15 | [0.357, 0.802] |
-| 5 | 0.637 | 0.857 | 14 | [0.601, 0.960] |
-| 6 | 0.668 | 0.600 | 15 | [0.357, 0.802] |
-| 7 | 0.708 | 0.533 | 15 | [0.301, 0.752] |
-| 8 | 0.753 | 0.667 | 15 | [0.417, 0.848] |
-| 9 | 0.827 | 0.733 | 15 | [0.480, 0.891] |
+| 0 | 0.524 | 0.385 | 13 | [0.177, 0.645] |
+| 1 | 0.614 | 0.385 | 13 | [0.177, 0.645] |
+| 2 | 0.645 | 0.417 | 12 | [0.193, 0.680] |
+| 3 | 0.682 | 0.538 | 13 | [0.291, 0.768] |
+| 4 | 0.713 | 0.692 | 13 | [0.424, 0.873] |
+| 5 | 0.737 | 0.583 | 12 | [0.320, 0.807] |
+| 6 | 0.767 | 0.538 | 13 | [0.291, 0.768] |
+| 7 | 0.801 | 0.417 | 12 | [0.193, 0.680] |
+| 8 | 0.829 | 0.846 | 13 | [0.578, 0.957] |
+| 9 | 0.874 | 0.692 | 13 | [0.424, 0.873] |
 
-The top three bins all sit below their predictions, which is the over-dispersion
-the 0.733 slope reports.
+**Nine of the ten bins sit below their predicted value**, several of them far
+below. That is the calibration intercept of −0.778 made visible: the model's
+level is set from a development era whose failure rate is 0.631, and it is
+applied to an evaluation era whose rate is 0.551. The slope of 0.851 reports
+the remaining over-dispersion on top of that shift.
+
+Note also that the predicted range is compressed into [0.52, 0.92]. A model
+with little signal predicts near its training base rate for everyone; the bins
+are narrow because the predictions are.
 
 ### 5.6 Operating points
 
@@ -345,7 +380,7 @@ verdict.
 ### 5.7 Decision curve
 
 Net benefit of acting on the model's flag versus flagging every program
-(`treat_all`) or none (`treat_none`), at test prevalence 0.557.
+(`treat_all`) or none (`treat_none`), at evaluation prevalence 0.551.
 
 - **Thresholds 0.05–0.20:** model net benefit is identical to `treat_all`
   (0.534, 0.508, 0.479, 0.446). The model adds nothing a blanket policy does not.
@@ -429,8 +464,8 @@ contents of the database this model was trained from:
 | Table | Rows |
 |---|---|
 | `program` | 600 |
-| `program_indication` (development tracks) | 785 |
-| `evidence_item` | 5,444 |
+| `program_indication` (development tracks) | 765 |
+| `evidence_item` | 5,273 |
 | `source` | 90 |
 | `compound` | 600 |
 | `target` | 42 |
@@ -515,7 +550,7 @@ i.e. p ≈ 0.59. The 0.60 target is chosen to sit in the range usually quoted fo
 oncology Phase II efficacy attrition; **it is a property of the simulation, not an
 estimate of it**.
 
-Re-derived from the realised draw (`artifacts/demo_ground_truth.json`, 785 tracks):
+Re-derived from the realised draw (`artifacts/demo_ground_truth.json`, 765 tracks):
 
 | Quantity | Generator's stated approximation | Realised |
 |---|---|---|
@@ -526,7 +561,7 @@ Re-derived from the realised draw (`artifacts/demo_ground_truth.json`, 785 track
 `verify_base_rate()` is run by the seeding CLI so a drifting generator is noticed
 immediately. On this database it reports a realised primary failure rate of
 **0.5867** against a target of 0.60 — within the ±0.12 tolerance. Realised outcome
-mix across all 785 tracks:
+mix across all 765 tracks:
 
 ```
 phase_2_efficacy_failure    335     progressed_past_phase_2      167
@@ -568,7 +603,7 @@ are left `active_no_outcome_yet` with probability **0.30**.
 **Commercial discontinuation is independent of latent quality by construction.**
 That is exactly why the cohort builder must exclude it: a model that learned to
 predict it would be predicting corporate behaviour, not biology. The realised
-exclusion waterfall (785 candidates → 571 included, 214 excluded) is:
+exclusion waterfall (765 candidates → 552 included, 213 excluded) is:
 
 | Exclusion reason | n |
 |---|---|
@@ -579,7 +614,7 @@ exclusion waterfall (785 candidates → 571 included, 214 excluded) is:
 | `non_scientific_discontinuation:sponsor_insolvency` | 20 |
 | `outcome_excluded:active_no_outcome_yet` | 17 |
 
-Resulting cohort: **571 entries, 335 positive (58.7%), 236 negative.**
+Resulting cohort: **552 entries, 325 positive (58.9%), 236 negative.**
 
 ### 6.6 Deliberate post-cutoff evidence
 
@@ -658,7 +693,7 @@ Discordant features: `animal_n_invivo_studies`, `animal_mean_disease_similarity`
 `sponsor_affiliated_fraction`, `max_safety_severity_ord`,
 `biomarker_species_concordance_ord`.
 
-Zero of the 16 are credible. Under an L2 penalty of 128 on 422 rows, coefficients
+Zero of the 21 are credible. Under an L2 penalty of 64 on 187 rows, coefficients
 are shrunk hard and sign is close to arbitrary for weak features. The honest
 reading is not "the model discovered that randomisation increases risk" — it is
 **"do not read individual coefficients from this fit."**
@@ -685,16 +720,16 @@ overlap is exaggerated.
 The headline split enforces component integrity on program and compound, but
 39 targets appear on both sides. This analysis rebuilds components from program,
 compound **and** target, so no program sharing a target with a test program can
-appear in training. It is 5-fold cross-sectional cross-validation over all 571
+appear in training. It is 5-fold cross-sectional cross-validation over all 552
 rows — **not temporal** — so it is not directly comparable to §5.3.
 
 | Metric | Target-grouped CV | Headline temporal split |
 |---|---|---|
-| AUROC | **0.601** | 0.630 |
+| AUROC | **0.642** | 0.622 |
 | Brier | 0.237 | 0.238 |
-| Log loss | 0.668 | 0.671 |
+| Log loss | 0.654 | 0.731 |
 | Scaled Brier | +0.021 | +0.035 |
-| Calibration slope | 1.761 | 0.733 |
+| Calibration slope | 1.066 | 0.851 |
 
 AUROC falls by 0.029 and skill roughly halves when target sharing is forbidden.
 Given the interval on the headline AUROC ([0.537, 0.720]) this drop is not
@@ -713,14 +748,14 @@ be read as such.
 
 | Family | Log loss | AUROC | Brier | Scaled Brier | Cal. slope | Verdict |
 |---|---|---|---|---|---|---|
-| `l2_logistic` | 0.6708 | 0.6298 | 0.2382 | +0.0347 | 0.733 | **adopted** (incumbent baseline) |
-| `gbdt` | **0.6639** | 0.6325 | 0.2357 | +0.0448 | **1.452** | disqualified — slope outside [0.80, 1.25] |
+| `l2_logistic` | 0.6135 | 0.6516 | — | — | 0.837 | **adopted** (incumbent baseline) |
+| `gbdt` | **0.6298** | 0.5781 | — | — | **0.711** | disqualified — slope outside [0.80, 1.25] |
 | `hierarchical_logistic` | 0.6714 | 0.6322 | 0.2386 | +0.0329 | **0.776** | disqualified — slope outside [0.80, 1.25] |
 
 All three passed the loose sanity band [0.15, 6.0]. Note that **GBDT had the best
 log loss and the best skill** and was rejected on calibration slope alone. That is
 a defensible rule for a product whose output is a probability, but it is a rule,
-and a reader is entitled to disagree with it. The incumbent's own slope of 0.733
+and a reader is entitled to disagree with it. The incumbent's own development slope of 0.837
 is *also* outside the [0.80, 1.25] band — the band disqualifies challengers, it
 does not demote the baseline. That asymmetry is worth knowing.
 
@@ -738,7 +773,7 @@ deployment. Four folds.
 | 16.0 | 0.6769 |
 | 32.0 | 0.6521 |
 | 64.0 | 0.6401 |
-| **128.0** | **0.6389** |
+| **64.0** | **0.6274** |
 | 256.0 | 0.6445 |
 | 512.0 | 0.6525 |
 | 1024.0 | 0.6597 |
@@ -747,7 +782,7 @@ deployment. Four folds.
 The optimum is interior to the grid (`optimum_at_grid_boundary: false`), which is
 the check that matters — a boundary optimum would mean the grid was wrong. The
 curve is very flat between 64 and 256, and the selected penalty is large relative
-to 422 rows and 109 columns. That is the model telling you there is not much
+to 187 rows and 109 columns. That is the model telling you there is not much
 signal to fit.
 
 ---
@@ -759,7 +794,7 @@ signal to fit.
 > **Verdict: `not_distinguishable_from_base_rate`.**
 >
 > "The model is not distinguishable from quoting the cohort base rate: Brier skill
-> +3.5% (95% CI -6.5% to +11.2%), interval includes zero. Treat individual
+> -6.5% (95% CI -21.5% to +5.9%), interval includes zero. Treat individual
 > estimates as weakly informative at best."
 > — `metrics.usefulness.headline`, generated by the validation pipeline, not by
 > a human writing documentation.
@@ -792,7 +827,7 @@ Reproduced verbatim from `model_artifact.limitations`:
 1. This model was trained on synthetic demonstration data. Its coefficients,
    metrics and predictions describe a simulated data-generating process and carry
    NO scientific interpretation about real therapeutic programs.
-2. Validation rests on 466 independent connected components, not 571 rows.
+2. Validation rests on 465 independent connected components, not 552 rows.
    Confidence intervals are computed at the component level for this reason.
 3. 12 rows were moved to a later partition because their connected component
    straddled a temporal boundary; they did not contribute to training.
@@ -938,21 +973,21 @@ All paths absolute; there is no activated virtualenv.
 
 ```bash
 # Full demonstration pipeline: init-db -> seed -> build-cohort -> train
-cd /Users/jorgerodriguez/Desktop/Bioinformatics/backend && \
-  /Users/jorgerodriguez/Desktop/Bioinformatics/.venv/bin/python -m trs.cli pipeline \
+cd backend && \
+  ../.venv/bin/python -m trs.cli pipeline \
   --programs 600 --seed 20240917
 
 # Oracle ceiling (§5.4)
-cd /Users/jorgerodriguez/Desktop/Bioinformatics/backend && \
-  /Users/jorgerodriguez/Desktop/Bioinformatics/.venv/bin/python -m trs.cli oracle
+cd backend && \
+  ../.venv/bin/python -m trs.cli oracle
 
 # Registered artifacts
-cd /Users/jorgerodriguez/Desktop/Bioinformatics/backend && \
-  /Users/jorgerodriguez/Desktop/Bioinformatics/.venv/bin/python -m trs.cli models
+cd backend && \
+  ../.venv/bin/python -m trs.cli models
 
 # Test suite
-cd /Users/jorgerodriguez/Desktop/Bioinformatics/backend && \
-  /Users/jorgerodriguez/Desktop/Bioinformatics/.venv/bin/python -m pytest tests -q
+cd backend && \
+  ../.venv/bin/python -m pytest tests -q
 ```
 
 `trs oracle`, `trs models` and `pytest tests` were run against the current
@@ -974,12 +1009,13 @@ doing its job. **None of these has been changed** — this document does not mod
    number" — is currently asserted by no test.
 2. **`cohort_entry.split` and `split_fold` are never written.** The column
    docstring says "Assigned by `trs.validation.splitters`", but no code path
-   assigns them; all 571 rows have `split = NULL`. The split is computed in memory
+   assigns them; all 552 rows have `split = NULL`. The split is computed in memory
    in `trs/pipeline/train.py` and discarded. The practical cost appears in §5.4:
    an oracle restricted to the test partition cannot be computed after the fact.
 3. **`SplitAssignment.dropped` is a misleading name.** In
    `trs/validation/splitters.py:202` it counts rows whose partition *changed*
-   (`final != provisional`), not rows removed. 422 + 149 = 571, so nothing was
+   (`final != provisional`), not rows removed. Under the current protocol
+   187 + 127 + 238 purged = 552, and the purge reasons are itemised, so nothing is
    dropped. The artifact's own limitation text gets this right ("moved to a later
    partition"); the key name does not.
 4. **`ProvenanceMethod.MODEL_GENERATED_UNVERIFIED` is not enforced anywhere.** The
@@ -988,14 +1024,14 @@ doing its job. **None of these has been changed** — this document does not mod
    definition — no filter in the cohort builder, the feature builder or the
    pipeline excludes it. See [`DATA_PROVENANCE.md`](DATA_PROVENANCE.md) §5.
 5. **15 orphan feature snapshots.** `feature_snapshot` holds 586 rows for 586
-   distinct tracks while the cohort has 571 entries; all 571 have a snapshot and
+   distinct tracks while the cohort has 552 entries; all 552 have a snapshot and
    15 snapshots belong to tracks outside it. Benign residue from an earlier run,
    but it means a snapshot count is not a cohort count.
 
 ---
 
 *Generated against the live repository and database on 2026-09-24. Every figure in
-this card was read from `backend/artifacts/ptrs-pef-001.json`,
+this card was read from `backend/artifacts/ptrs-pef-004.json`,
 `backend/artifacts/demo_ground_truth.json`, `backend/trs.db`, or recomputed by
 running the commands in §10.1. No figure was transcribed from memory or from any
 prior document.*

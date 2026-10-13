@@ -362,9 +362,12 @@ unconditional will under-estimate total attrition.
 | `preclinical_attrition` | Probability that a preclinical program is abandoned before any human is dosed, for a scientific reason. | 3.0 y |
 | `eventual_approval` | Probability that a program entering human development is eventually approved by a major regulator in this indication. | 8.0 y |
 
-`ph2_any_scientific_failure` is the composite that exists so the *unconditional* scientific
-attrition question can also be asked. It has fewer exclusions than the primary and therefore a
-larger cohort.
+`ph2_any_scientific_failure` is the composite that widens the *cause* — efficacy, safety or PK/PD
+rather than efficacy alone. It has fewer exclusions than the primary and therefore a larger cohort,
+but it is **still conditional**: it continues to exclude commercial and strategic discontinuations,
+because those are not statements about the biology. No endpoint defined here is unconditional, and
+none can be while sponsors stop programmes for reasons a model of translation should not be asked
+to predict.
 
 `preclinical_attrition` carries a standing warning in its own `notes` field: it is severely
 affected by survivorship bias, because programs that die before an IND are frequently never
@@ -587,12 +590,12 @@ free-text questions.
 ## 11. Where the product actually stands
 
 The platform's own verdict on the registered demonstration model, read from
-`backend/artifacts/ptrs-pef-001.json` (`metrics.usefulness`):
+`backend/artifacts/ptrs-pef-004.json` (`metrics.usefulness`):
 
 > **`not_distinguishable_from_base_rate`**
 >
-> "The model is not distinguishable from quoting the cohort base rate: Brier skill +3.5% (95% CI
-> -6.5% to +11.2%), interval includes zero. Treat individual estimates as weakly informative at
+> "The model is not distinguishable from quoting the cohort base rate: Brier skill -6.5% (95% CI
+> -21.5% to +5.9%), interval includes zero. Treat individual estimates as weakly informative at
 > best."
 
 The artifact also records *why* this is the threshold question rather than a footnote:
