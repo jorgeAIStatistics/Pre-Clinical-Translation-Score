@@ -17,13 +17,26 @@ session scope. The helpers used are the same ones ``conftest`` uses.
 
 Why the seed is larger than the 60 programs ``seeded_session`` uses
 ------------------------------------------------------------------
-Training is not a formality here: the model-selection gate in
-``trs.pipeline.select`` rejects a candidate whose held-out calibration slope is
-outside the sanity band. At 60 programs the temporal split leaves ~14 test rows,
-the recalibrator separates, the slope explodes, and training fails by design.
-``N_SEED_PROGRAMS`` is the smallest round size observed to produce a model that
-clears the gate, which keeps the scoring tests honest — they run against a model
-that passed the same gate production models pass.
+Training is not a formality here. Two gates must be cleared with real data.
+
+``trs.pipeline.select`` rejects a candidate whose calibration slope is outside
+the sanity band; at 60 programs the recalibrator separates and the slope
+explodes.
+
+``trs.validation.protocol.plan_training`` then requires a development partition
+of at least 120 rows, an evaluation partition of at least 60, and at least
+three usable forward-chaining folds — *after* purging rows whose outcome had
+not resolved by the fitting origin. Label maturity is the expensive constraint:
+it removes roughly half the otherwise-eligible development rows, because the
+median outcome lag exceeds five years.
+
+``N_SEED_PROGRAMS`` is the smallest round size observed to satisfy
+``temporal_outer_maturity`` — the same protocol the production demonstration
+run accepts. That matters more than the fixture's speed: a smaller seed would
+only satisfy ``retrospective``, and the scoring tests would then be exercising
+a protocol path production does not use. The thresholds in
+``trs.validation.protocol`` are deliberately not lowered for tests; a test that
+cannot meet them is told to supply more data.
 
 Offline
 -------
@@ -44,8 +57,20 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-#: Programs to seed. See the module docstring for why this is not 60.
-N_SEED_PROGRAMS = 150
+#: Programs to seed. See the module docstring for why this is not 60 — and why
+#: it is not 150, which was enough for the predecessor's split but leaves only
+#: 39 label-mature development rows under the current protocol. 480 satisfies
+#: the protocol's row counts and then fails the selection gate with a
+#: calibration slope of −0.147: 121 development rows against ~110 encoded
+#: columns is a degenerate fit, and the gate is right to refuse it. 700 yields
+#: 187 development and 140 evaluation rows and clears both gates in ~4 s.
+N_SEED_PROGRAMS = 700
+
+#: Protocol names ``trs.validation.protocol`` can accept. A number whose
+#: provenance names none of these cannot be interpreted.
+DECLARED_PROTOCOLS = frozenset({
+    "strict_temporal", "temporal_outer_maturity", "retrospective",
+})
 
 #: The four verdicts ``trs.pipeline.train._usefulness_verdict`` can return.
 #: A fifth value appearing here means an unreviewed claim about the model's
@@ -181,9 +206,44 @@ def api_env(tmp_path_factory) -> ApiEnv:
         app.dependency_overrides[get_db] = _override_get_db
         with TestClient(app) as client:
             env.client = client
-            response = client.get("/api/v1/programs", params={"limit": 500})
-            assert response.status_code == 200, response.text
-            env.tracks = response.json()
+            # Page through the whole listing rather than asking for one
+            # oversized page. `/api/v1/programs` caps `limit` at 500, so a
+            # single request silently truncated the fixture's view of the
+            # cohort once the seed grew past that — and every test that
+            # compares a filtered listing against `api_env.tracks` inherited
+            # the truncation as a false expectation.
+            page_size = 200
+            collected: list[dict[str, Any]] = []
+            seen: set[str] = set()
+            while True:
+                response = client.get(
+                    "/api/v1/programs",
+                    params={"limit": page_size, "offset": len(collected)},
+                )
+                assert response.status_code == 200, response.text
+                page = response.json()
+                collected.extend(page)
+                if len(page) < page_size:
+                    break
+                assert len(collected) <= 5000, "pagination did not terminate"
+            for row in collected:
+                assert row["id"] not in seen, (
+                    f"track {row['id']} was returned on two pages; the "
+                    "listing's ordering is not stable under offset"
+                )
+                seen.add(row["id"])
+
+            # Cross-check the paginated total against the database, so a
+            # listing that drops rows at a page boundary cannot pass as a
+            # complete view.
+            from trs.db.models.core import ProgramIndication as _PI
+
+            expected_total = session.query(_PI).count()
+            assert len(collected) == expected_total, (
+                f"paginated listing returned {len(collected)} tracks but the "
+                f"database holds {expected_total}"
+            )
+            env.tracks = collected
             yield env
     finally:
         app.dependency_overrides.clear()
@@ -910,9 +970,21 @@ def test_validation_report_publishes_the_unflattering_numbers(
     report = response.json()
 
     assert report["model_version"] == api_env.model_version
-    assert "Temporal split" in report["evaluation_design"]["split"]
-    assert report["evaluation_design"]["sizes"]["test"] > 0
     assert report["cohort"]["n_entries"] > 0
+
+    # The split description must name a declared protocol, not merely describe
+    # a date boundary. A reader who cannot tell which protocol produced a
+    # number cannot tell whether it may be read as deployment performance.
+    design = report["evaluation_design"]
+    assert any(
+        proto in design["split"] for proto in DECLARED_PROTOCOLS
+    ), f"split description names no declared protocol: {design['split']!r}"
+    sizes = design["sizes"]
+    assert sizes["development"] > 0
+    assert sizes["evaluation"] > 0
+    # Selection must have happened on fewer rows than the whole cohort and must
+    # not have been given the evaluation partition.
+    assert 0 < sizes["n_selection_rows"] <= sizes["development"]
 
     usefulness = report["usefulness"]
     assert usefulness["verdict"] in USEFULNESS_VERDICTS
@@ -927,7 +999,7 @@ def test_validation_report_publishes_the_unflattering_numbers(
     assert "base rate" in usefulness["headline"]
 
     primary = report["primary_metrics"]
-    assert primary["n"] == report["evaluation_design"]["sizes"]["test"]
+    assert primary["n"] == report["evaluation_design"]["sizes"]["evaluation"]
     assert 0.0 <= primary["discrimination"]["auroc"]["value"] <= 1.0
     assert 0.0 <= primary["accuracy"]["brier"]["value"] <= 1.0
     assert 0.0 <= primary["prevalence"] <= 1.0

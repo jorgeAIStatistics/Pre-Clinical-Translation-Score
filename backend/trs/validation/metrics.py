@@ -58,11 +58,22 @@ def auprc(y: np.ndarray, p: np.ndarray) -> float | None:
 
 
 def scaled_brier(y: np.ndarray, p: np.ndarray) -> float | None:
-    """Brier skill score against the no-covariate base-rate model.
+    """Brier skill against the *evaluation set's own* prevalence. Descriptive.
 
-    ``1 - BS/BS_base``. Positive means the model beats simply quoting the
-    cohort's attrition rate to everyone — a low bar that a surprising number of
-    risk scores fail, and one AUROC cannot detect.
+    ``1 - BS/BS_base`` where ``base = mean(y)`` over the rows being scored.
+
+    Read the reference carefully, because it is not a model anyone could have
+    deployed: it is the best possible constant *in hindsight, on these rows*.
+    That makes this the harder of the two bars — a constant fitted on
+    development data will differ from the evaluation prevalence and score worse
+    — and it makes the quantity a normalisation of the Brier score rather than
+    a comparison against a competitor.
+
+    For the comparison that answers "is this model better than the simplest
+    thing we could actually have shipped", use
+    :func:`skill_against_reference` with
+    :func:`deployable_reference_prediction`. Both are reported; they are
+    different questions and the artifact labels them separately.
     """
     y = np.asarray(y, dtype=float)
     if y.size == 0:
@@ -72,6 +83,82 @@ def scaled_brier(y: np.ndarray, p: np.ndarray) -> float | None:
     if bs_base <= 0:
         return None
     return float(1.0 - brier_score(y, p) / bs_base)
+
+
+def deployable_reference_prediction(y_development: np.ndarray) -> float:
+    """The intercept-only model anyone could have shipped: the development rate.
+
+    Fitted on permitted development labels only, so it is a genuine competitor
+    rather than a hindsight-optimal constant. Clipped away from the open
+    interval's ends so the log loss of a degenerate development set stays
+    finite.
+    """
+    y = np.asarray(y_development, dtype=float)
+    if y.size == 0:
+        raise ValueError("cannot fit a reference model on zero development rows")
+    rate = float(np.mean(y))
+    return float(np.clip(rate, 1.0 / (y.size + 2.0), 1.0 - 1.0 / (y.size + 2.0)))
+
+
+def skill_against_reference(
+    y: np.ndarray,
+    p: np.ndarray,
+    reference: float | np.ndarray,
+    *,
+    components: np.ndarray | None = None,
+    n_bootstrap: int = 1000,
+    random_state: int = 0,
+    level: float = 0.95,
+) -> dict[str, Any]:
+    """Brier and log-loss skill against a supplied, deployable reference.
+
+    ``reference`` is a prediction, not a summary of ``y``: pass the constant
+    from :func:`deployable_reference_prediction` fitted on development labels,
+    or any other competitor's predictions on these same rows.
+
+    The interval is a *paired* component bootstrap of the difference, because
+    both predictions are evaluated on the same programs and comparing two
+    independent intervals would overstate the uncertainty of the difference.
+    Rows within a connected component are not independent, hence components.
+    """
+    y = np.asarray(y, dtype=int)
+    p = np.asarray(p, dtype=float)
+    ref = (
+        np.full(y.shape, float(reference), dtype=float)
+        if np.isscalar(reference) or np.asarray(reference).ndim == 0
+        else np.asarray(reference, dtype=float)
+    )
+    if ref.shape != y.shape:
+        raise ValueError(
+            f"reference has shape {ref.shape}, labels have {y.shape}"
+        )
+
+    bs_model, bs_ref = brier_score(y, p), brier_score(y, ref)
+    ll_model, ll_ref = log_loss(y, p), log_loss(y, ref)
+    out: dict[str, Any] = {
+        "reference_kind": "deployable_constant"
+        if np.allclose(ref, ref[0]) else "supplied_predictions",
+        "reference_value": float(ref[0]) if np.allclose(ref, ref[0]) else None,
+        "reference_brier": bs_ref,
+        "reference_log_loss": ll_ref,
+        "model_brier": bs_model,
+        "model_log_loss": ll_model,
+        "brier_skill": float(1.0 - bs_model / bs_ref) if bs_ref else None,
+        "log_loss_skill": float(1.0 - ll_model / ll_ref) if ll_ref else None,
+    }
+
+    if components is not None and n_bootstrap:
+        paired = paired_bootstrap_difference(
+            y, p, ref, components, metric="brier",
+            n_bootstrap=n_bootstrap, random_state=random_state, level=level,
+        )
+        # Sign convention: positive skill means the model's Brier is *lower*.
+        out["brier_difference_model_minus_reference"] = paired
+        out["model_better_than_reference"] = (
+            None if paired["excludes_zero"] is None
+            else bool(paired["excludes_zero"] and (paired["ci_high"] or 0) < 0)
+        )
+    return out
 
 
 def calibration_intercept_slope(y: np.ndarray, p: np.ndarray) -> dict[str, float | None]:
@@ -313,8 +400,18 @@ def evaluate(
     random_state: int = 0,
     thresholds: tuple[float, ...] = (0.3, 0.5, 0.7),
     level: float = 0.95,
+    reference_prediction: float | np.ndarray | None = None,
 ) -> dict[str, Any]:
-    """Full metric panel with component-level bootstrap intervals."""
+    """Full metric panel with component-level bootstrap intervals.
+
+    ``reference_prediction`` is the deployable competitor — normally the
+    intercept-only constant from
+    :func:`deployable_reference_prediction` fitted on development labels. When
+    supplied, the panel carries a ``reference`` block holding the paired
+    comparison against it. When omitted, the only skill figure available is
+    ``scaled_brier``, which normalises against the evaluation set's own
+    prevalence and is explicitly *not* a comparison against a deployable model.
+    """
     y = np.asarray(y, dtype=int)
     p = np.asarray(p, dtype=float)
     n = y.size
@@ -361,6 +458,13 @@ def evaluate(
                 n_bootstrap=len(vals),
             )
 
+    reference_block: dict[str, Any] | None = None
+    if reference_prediction is not None and n:
+        reference_block = skill_against_reference(
+            y, p, reference_prediction, components=components,
+            n_bootstrap=n_bootstrap, random_state=random_state, level=level,
+        )
+
     return {
         "n": int(n),
         "n_positive": int(y.sum()),
@@ -369,6 +473,11 @@ def evaluate(
         "accuracy": {
             k: estimates[k].to_dict() for k in ("brier", "log_loss", "scaled_brier")
         },
+        "reference": reference_block,
+        "scaled_brier_reference": (
+            "evaluation_set_prevalence (descriptive normalisation, not a "
+            "deployable model)"
+        ),
         "calibration": {
             **{k: v.to_dict() for k, v in cal_estimates.items()},
             **expected_calibration_error(y, p),
