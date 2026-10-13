@@ -87,7 +87,7 @@ class ModelBundle:
     status: str = "unknown"
     status_record: dict[str, Any] = dataclasses.field(default_factory=dict)
     #: Which functional this artifact's metrics describe, and which the server
-    #: must therefore return. See :mod:`trs.scoring.contract`.
+    #: must therefore return. See :mod:`trs.modeling.contract`.
     prediction_functional: str = "unknown"
     prediction_contract_version: str | None = None
 

@@ -658,9 +658,22 @@ def test_evidence_matrix_is_internally_consistent(
 
 @pytest.fixture(scope="session")
 def score(client: TestClient, scorable_track: dict[str, Any]) -> dict[str, Any]:
-    response = client.post(f"/api/v1/programs/{scorable_track['id']}/score", json={})
+    """A score obtained in an explicitly selected demonstration context.
+
+    The fixture model is trained on synthetic data, so `demo_context` is
+    required. ``test_score_is_refused_without_a_demonstration_context`` covers
+    the other branch — without this flag the API returns a refusal, and that is
+    the behaviour the eligibility policy exists to produce.
+    """
+    response = client.post(
+        f"/api/v1/programs/{scorable_track['id']}/score",
+        json={"demo_context": True},
+    )
     assert response.status_code == 200, response.text
-    return response.json()
+    body = response.json()
+    assert body["probability"] is not None
+    assert body["eligibility"]["permitted"] is True
+    return body
 
 
 def test_score_returns_an_ordered_interval(
@@ -825,7 +838,7 @@ def test_scenario_returns_both_sides_of_the_comparison(
     """
     response = client.post(
         f"/api/v1/programs/{scorable_track['id']}/scenarios",
-        json={"lever_keys": ["independent_replication"]},
+        json={"lever_keys": ["independent_replication"], "demo_context": True},
     )
     assert response.status_code == 200, response.text
     body = response.json()
@@ -871,7 +884,10 @@ def test_scenario_levers_cannot_make_a_program_look_worse(
     """
     response = client.post(
         f"/api/v1/programs/{scorable_track['id']}/scenarios",
-        json={"lever_keys": ["independent_replication", "multi_lab_replication"]},
+        json={
+            "lever_keys": ["independent_replication", "multi_lab_replication"],
+            "demo_context": True,
+        },
     )
     assert response.status_code == 200, response.text
     body = response.json()
@@ -1073,7 +1089,157 @@ def test_every_probability_in_a_scenario_response_is_bounded(
     """
     response = client.post(
         f"/api/v1/programs/{scorable_track['id']}/scenarios",
-        json={"lever_keys": ["exposure_gap_identified", "contradictory_study_appears"]},
+        json={
+            "lever_keys": ["exposure_gap_identified", "contradictory_study_appears"],
+            "demo_context": True,
+        },
     )
     assert response.status_code == 200, response.text
     assert_probabilities_bounded(response.json(), minimum_checked=24)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 11. Eligibility, refusal and the prediction contract
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_score_is_refused_without_a_demonstration_context(
+    client: TestClient, api_env: ApiEnv, scorable_track: dict[str, Any]
+) -> None:
+    """If this breaks, a simulation's number appears without being asked for.
+
+    The fixture model is trained on synthetic data. Asking for a score without
+    declaring a demonstration context must return a refusal — ``probability``
+    absent, a machine-readable ``refusal_code``, and a reason a person can
+    read. Not a number with a banner next to it: a banner is something a client
+    can fail to render, and a null is not.
+    """
+    if api_env.model_version is None:
+        pytest.skip(f"no model artifact: {api_env.model_error}")
+
+    response = client.post(
+        f"/api/v1/programs/{scorable_track['id']}/score", json={}
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    assert body["probability"] is None
+    assert body["interval_low"] is None and body["interval_high"] is None
+    assert body["uncertainty"] is None
+    assert body["prediction_contract"] is None
+    assert body["explanation"] is None
+
+    elig = body["eligibility"]
+    assert elig["permitted"] is False
+    assert elig["refusal_code"] == "demo_context_not_selected"
+    assert elig["model_status"] == "demo_only"
+    assert elig["reason"].strip()
+
+
+def test_refusal_still_returns_evidence_review_material(
+    client: TestClient, api_env: ApiEnv, scorable_track: dict[str, Any]
+) -> None:
+    """If this breaks, declining to score becomes declining to be useful.
+
+    The whole argument for a default-deny score policy is that everything
+    *else* the platform knows stays available: completeness, the evidence
+    count, the snapshot id for provenance, the endpoint's estimand. A refusal
+    that blanks the page is a worse product and an easier one to work around.
+    """
+    if api_env.model_version is None:
+        pytest.skip(f"no model artifact: {api_env.model_error}")
+
+    body = client.post(
+        f"/api/v1/programs/{scorable_track['id']}/score", json={}
+    ).json()
+
+    assert body["completeness"]["overall"] is not None
+    assert 0.0 <= body["completeness"]["overall"] <= 1.0
+    assert body["n_evidence_items"] >= 0
+    assert body["feature_snapshot_id"]
+    assert body["estimand"].strip()
+    assert body["evidence_confidence"]
+    assert body["model_usefulness"], "the model's own verdict was dropped"
+    assert body["explanation_unavailable_reason"]
+
+
+def test_scenario_is_refused_when_no_score_may_be_produced(
+    client: TestClient, api_env: ApiEnv, scorable_track: dict[str, Any]
+) -> None:
+    """If this breaks, a scenario reports 'no change' where the truth is 'no estimate'.
+
+    Returning a comparison whose two sides are both null, inside a shape that
+    promises ``delta_probability``, invites a client to render zero.
+    """
+    if api_env.model_version is None:
+        pytest.skip(f"no model artifact: {api_env.model_error}")
+
+    response = client.post(
+        f"/api/v1/programs/{scorable_track['id']}/scenarios",
+        json={"lever_keys": ["independent_replication"]},
+    )
+    assert response.status_code == 409, response.text
+    detail = response.json()["detail"]
+    assert detail["error"] == "scenario_unavailable"
+    assert detail["refusal_code"] == "demo_context_not_selected"
+    assert detail["reason"].strip()
+
+
+def test_served_probability_is_the_functional_the_metrics_describe(
+    score: dict[str, Any], client: TestClient
+) -> None:
+    """If this breaks, the displayed number is not the one that was evaluated.
+
+    The predecessor served ``np.mean(sigmoid(draws))`` while every metric in
+    the artifact — and the driver attribution — described the calibrated
+    plug-in value. The two differ systematically by Jensen's inequality, most
+    for the programmes with the least evidence, which are exactly the ones
+    whose number is read most carefully.
+    """
+    contract = score["prediction_contract"]
+    assert contract["functional"] == "calibrated_plug_in"
+    assert contract["evaluated_functional"] == contract["functional"], (
+        "the served functional and the evaluated functional have diverged"
+    )
+    assert contract["probability"] == pytest.approx(score["probability"])
+
+    # The predictive mean must be present under its own name and must not be
+    # the served value's twin by accident.
+    assert contract["predictive_mean_probability"] is not None
+    assert score["uncertainty"]["predictive_mean_probability"] == pytest.approx(
+        contract["predictive_mean_probability"]
+    )
+    assert contract["functional_gap"] == pytest.approx(
+        contract["predictive_mean_probability"] - contract["probability"]
+    )
+
+    # And the artifact must agree about which functional it reports on.
+    validation = client.get("/api/v1/model/validation").json()
+    assert validation["prediction_contract"]["evaluated_functional"] == (
+        contract["functional"]
+    )
+
+    assert "NOT a prediction interval" in contract["interval_estimand"]
+
+
+def test_explanation_is_checked_against_the_served_number(
+    score: dict[str, Any]
+) -> None:
+    """If this breaks, drivers are shown for a number nobody can see.
+
+    The internal reconstruction check compares a partition of a sum against
+    that sum — both built from the same terms — so it cannot detect that the
+    decomposition targets the wrong quantity. Only the external check can, and
+    a ``None`` there means it did not run rather than that it passed.
+    """
+    explanation = score["explanation"]
+    if explanation is None:
+        pytest.skip(f"no attribution: {score['explanation_unavailable_reason']}")
+
+    assert explanation["external_check_ran"] is True, (
+        "the service did not hand the explainer the number it serves, so the "
+        "only check capable of catching a wrong-quantity explanation was "
+        "skipped"
+    )
+    assert explanation["served_reconstruction_error"] == pytest.approx(0.0, abs=1e-9)
+    assert explanation["explained_quantity"] == "calibrated_plug_in"
+    assert explanation["explained_quantity_description"].strip()

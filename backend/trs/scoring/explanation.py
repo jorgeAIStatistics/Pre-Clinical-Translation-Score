@@ -44,6 +44,7 @@ from trs.features.spec import DOMAIN_LABELS, FeatureDomain
 from trs.features.transform import FeatureTransformer
 from trs.modeling.base import RiskModel
 from trs.modeling.calibration import Calibrator, LogisticRecalibration
+from trs.modeling.contract import FUNCTIONAL_DESCRIPTIONS, PRIMARY_FUNCTIONAL
 from trs.ontology.enums import MissingnessReason
 
 #: Contributions below this absolute log-odds magnitude are pooled into an
@@ -91,9 +92,15 @@ class Explanation:
     decreasing: list[Driver]
     by_domain: list[dict[str, Any]]
     other_factors_contribution: float
-    #: Verified: |sum(contributions) + baseline - total| must be ~0.
+    #: Internal check: |sum(contributions) + baseline - total| must be ~0. Both
+    #: sides derive from the same terms, so this alone proves little.
     reconstruction_error: float
     method: str
+    #: External check: ``|served − reconstructed|`` when the caller supplied the
+    #: number it is going to display, else ``None``. ``None`` means the check
+    #: did not run, which is not the same as it having passed — and it is the
+    #: only one of the two that can catch explaining the wrong quantity.
+    served_reconstruction_error: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -107,6 +114,13 @@ class Explanation:
             "by_domain": self.by_domain,
             "other_factors_contribution": self.other_factors_contribution,
             "reconstruction_error": self.reconstruction_error,
+            "served_reconstruction_error": self.served_reconstruction_error,
+            "external_check_ran": self.served_reconstruction_error is not None,
+            "explained_quantity": str(PRIMARY_FUNCTIONAL),
+            "explained_quantity_description": FUNCTIONAL_DESCRIPTIONS[
+                str(PRIMARY_FUNCTIONAL)
+            ],
+            "calibration_scale": "log_odds_affine",
             "method": self.method,
             "statement": (
                 "Each contribution is a term in the model's own linear predictor "
@@ -131,8 +145,24 @@ def explain(
     missingness: dict[str, str] | None = None,
     evidence_map: dict[str, list[str]] | None = None,
     top_k: int = 8,
+    served_probability: float | None = None,
+    served_tolerance: float = 1e-9,
 ) -> Explanation:
-    """Decompose one prediction into exact per-feature contributions."""
+    """Decompose one prediction into exact per-feature contributions.
+
+    ``served_probability`` is the number the caller is actually going to
+    display. When supplied, it is compared against the probability this
+    decomposition reconstructs, and a disagreement raises.
+
+    That external comparison is the point. The predecessor checked only that
+    ``baseline_logit + Σ contributions + other`` equalled ``total_logit`` — but
+    both sides were built from the same vector of scaled terms, so the check
+    verified that a partition of a sum sums to the sum. It could not detect
+    that the decomposition was explaining the *wrong quantity*, and it did: the
+    interface displayed a Monte-Carlo draw-mean while this function
+    reconstructed the plug-in value. An internal consistency check cannot catch
+    a mismatch with something it never looks at.
+    """
     if not model.supports_exact_attribution:
         raise ExplanationUnavailable(
             f"Model family {model.family!r} admits no exact additive "
@@ -226,7 +256,9 @@ def explain(
 
     drivers.sort(key=lambda d: abs(d.contribution), reverse=True)
 
-    # ---- integrity check ---------------------------------------------------
+    # ---- integrity checks --------------------------------------------------
+    # (a) Internal: the terms partition the linear predictor. Necessary, and on
+    #     its own worth little — both sides derive from the same terms.
     reconstructed = baseline_logit + sum(d.contribution for d in drivers) + other
     reconstruction_error = abs(reconstructed - total_logit)
     if reconstruction_error > 1e-8:  # pragma: no cover - guards a real defect
@@ -235,6 +267,24 @@ def explain(
             f"(error {reconstruction_error:.3e}). The decomposition is wrong and "
             "must not be shown."
         )
+
+    # (b) External: the reconstructed probability equals the number the caller
+    #     will display. This is the check that catches explaining the wrong
+    #     functional, which no amount of internal consistency can detect.
+    served_error: float | None = None
+    if served_probability is not None:
+        served_error = abs(float(served_probability) - probability)
+        if served_error > served_tolerance:
+            raise AssertionError(
+                "The driver decomposition does not reconstruct the quantity "
+                f"being served: served {served_probability!r}, decomposition "
+                f"reconstructs {probability!r} (error {served_error:.3e}, "
+                f"tolerance {served_tolerance:.1e}). Either the served "
+                "functional changed without the explainer following, or the "
+                "explainer is reading a different feature vector. Showing "
+                "drivers for a number nobody can see is worse than showing "
+                "none."
+            )
 
     # ---- domain roll-up ----------------------------------------------------
     domain_totals: dict[str, float] = {}
@@ -271,5 +321,6 @@ def explain(
         by_domain=by_domain,
         other_factors_contribution=float(other),
         reconstruction_error=float(reconstruction_error),
+        served_reconstruction_error=served_error,
         method=method,
     )

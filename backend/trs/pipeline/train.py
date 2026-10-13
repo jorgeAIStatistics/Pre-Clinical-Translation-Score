@@ -50,6 +50,7 @@ from trs.db.models.analytics import CohortEntry, CohortVersion, FeatureSnapshot
 from trs.db.models.core import Program, ProgramIndication
 from trs.features.spec import FEATURE_SCHEMA_VERSION
 from trs.modeling.calibration import select_calibrator
+from trs.modeling.contract import PREDICTION_CONTRACT_VERSION, PRIMARY_FUNCTIONAL
 from trs.modeling.logistic import L2LogisticRisk
 from trs.pipeline.artifacts import (
     ModelBundle,
@@ -72,7 +73,6 @@ from trs.pipeline.develop import (
 )
 from trs.pipeline.features import materialise_cohort_snapshots, snapshot_rows
 from trs.pipeline.status import PROMOTION_CRITERIA, ModelStatus, derive_status
-from trs.scoring.contract import PREDICTION_CONTRACT_VERSION, PRIMARY_FUNCTIONAL
 from trs.validation.metrics import (
     deployable_reference_prediction,
     evaluate,
