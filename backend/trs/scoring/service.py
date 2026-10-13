@@ -185,9 +185,17 @@ class ScoringService:
         bundle = self.bundle_for(artifact.version)
 
         # ---- features ------------------------------------------------------
-        history = build_history_index(self.session)
+        # The endpoint comes from the artifact, not from the request default:
+        # the historical-rate features are built from resolved outcomes under a
+        # specific endpoint definition, and scoring a track with a snapshot
+        # built under a different one would mix predictors.
+        from trs.cohort.outcomes import ENDPOINTS as _ENDPOINTS
+
+        endpoint_def_for_features = _ENDPOINTS[artifact.endpoint]
+        history = build_history_index(self.session, endpoint_def_for_features)
         snapshot = materialise_snapshot(
-            self.session, track_id, as_of, history=history, overwrite=False
+            self.session, track_id, as_of,
+            endpoint=endpoint_def_for_features, history=history,
         )
         base_row = dict(snapshot.features)
         missingness = dict(snapshot.missingness)

@@ -176,7 +176,9 @@ def train(
     log(f"Cohort {cohort.name}/{cohort.version}: {len(entries)} labelled entries")
 
     # ---- 2. Features -------------------------------------------------------
-    snapshots = materialise_cohort_snapshots(session, entries, progress=verbose)
+    snapshots = materialise_cohort_snapshots(
+        session, entries, endpoint=endpoint, progress=verbose
+    )
     by_track = {(s.program_indication_id, s.as_of_date): s for s in snapshots}
     ordered: list[FeatureSnapshot] = [
         by_track[(e.program_indication_id, e.as_of_date)] for e in entries

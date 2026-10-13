@@ -33,6 +33,7 @@ from sqlalchemy import select
 
 from trs.cohort.build import AS_OF_RULES, _as_of_for, build_cohort
 from trs.cohort.outcomes import PRIMARY_ENDPOINT
+from trs.db.models.analytics import FeatureSnapshot
 from trs.db.models.core import Biomarker, Indication, Program, ProgramIndication, Target
 from trs.db.models.evidence import (
     EvidenceItem,
@@ -417,9 +418,9 @@ def test_persisted_snapshot_is_stable_when_rebuilt_after_new_evidence(seeded_ses
     """If this fails, a score shown to a user in 2019 changes when 2021 data lands.
 
     Feature snapshots are the object a historical prediction is reconstructed
-    from. Rebuilding one for the same (track, as-of, schema version) must
-    reproduce the stored vector exactly, or the audit trail behind every
-    delivered score is fiction.
+    from. Evidence that becomes available *after* the cutoff must not enter the
+    vector at all, so a forced rebuild at the same cutoff must reproduce the
+    stored vector exactly — same evidence revision, same row.
     """
     session, _ = seeded_session
     track, program = _busiest_track(session)
@@ -429,16 +430,80 @@ def test_persisted_snapshot_is_stable_when_rebuilt_after_new_evidence(seeded_ses
                                  history=build_history_index(session))
     original_hash = first.vector_hash
     original_features = dict(first.features)
+    original_revision = first.evidence_revision
     assert original_hash
+    assert original_revision and original_revision != "legacy-unversioned"
 
     _insert_future_evidence(session, track, program, cutoff)
 
     rebuilt = materialise_snapshot(session, track.id, cutoff,
                                    history=build_history_index(session),
-                                   overwrite=True)
+                                   rebuild=True)
+    assert rebuilt.id == first.id, (
+        "post-cutoff evidence changed the evidence revision, which means it "
+        "reached the as-of query"
+    )
+    assert rebuilt.evidence_revision == original_revision
     assert rebuilt.vector_hash == original_hash
     assert rebuilt.features == original_features
     assert rebuilt.n_evidence_items == first.n_evidence_items
+    assert rebuilt.superseded_by_id is None
+
+
+def test_corrected_evidence_creates_a_new_snapshot_and_preserves_the_old(
+    seeded_session,
+):
+    """If this fails, correcting an extraction rewrites history.
+
+    The predecessor's `overwrite=True` rewrote `features`, `vector_hash` and
+    `built_at` on the matching row, so any score referencing it silently
+    pointed at different numbers and the original assessment could not be
+    reproduced. Corrected evidence must produce a *second* snapshot at the same
+    scientific cutoff, with the first left exactly as it was.
+    """
+    import datetime as dt
+
+    from trs.db.models.evidence import EvidenceItem
+    from trs.pipeline.features import supersede_chain
+
+    session, _ = seeded_session
+    track, _program = _busiest_track(session)
+    cutoff = track.ind_or_cta_on
+
+    first = materialise_snapshot(session, track.id, cutoff,
+                                 history=build_history_index(session))
+    original_id = first.id
+    original_features = dict(first.features)
+    original_revision = first.evidence_revision
+    original_built_at = first.built_at
+
+    contributing = list((first.contributing_evidence_ids or {}).get("ids") or [])
+    assert contributing, "this track has no contributing evidence to correct"
+
+    # Correct one contributing item in place, as a reviewer would.
+    item = session.get(EvidenceItem, contributing[0])
+    assert item is not None
+    item.updated_at = (item.updated_at or dt.datetime.now(dt.UTC)) + dt.timedelta(
+        seconds=1
+    )
+    session.flush()
+
+    second = materialise_snapshot(session, track.id, cutoff,
+                                  history=build_history_index(session))
+
+    assert second.id != original_id, "the correction did not create a new snapshot"
+    assert second.evidence_revision != original_revision
+
+    # The original row is untouched apart from its supersession pointer.
+    original = session.get(FeatureSnapshot, original_id)
+    assert original is not None
+    assert original.features == original_features
+    assert original.evidence_revision == original_revision
+    assert original.built_at == original_built_at
+    assert original.superseded_by_id == second.id
+
+    chain = supersede_chain(session, original_id)
+    assert [c.id for c in chain] == [original_id, second.id]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1256,3 +1321,54 @@ def test_nested_temporal_folds_never_train_on_the_future(seeded_session, today):
 
         # Expanding window: training never overlaps the test rows themselves.
         assert set(train_idx.tolist()) & set(test_idx.tolist()) == set()
+
+
+def test_snapshots_for_two_endpoints_are_not_interchangeable(seeded_session):
+    """If this fails, a secondary endpoint trains on the primary one's history.
+
+    The historical-rate features are built from resolved outcomes under a
+    specific endpoint definition — which outcomes count as failures and which
+    as successes. `build_history_index` defaulted to PRIMARY_ENDPOINT and
+    `materialise_cohort_snapshots` took no endpoint argument at all, so
+    training any of the other five declared endpoints silently used the primary
+    endpoint's labels as predictors.
+    """
+    from trs.cohort.outcomes import ENDPOINTS, PRIMARY_ENDPOINT
+
+    session, _ = seeded_session
+    track, _program = _busiest_track(session)
+    cutoff = track.ind_or_cta_on
+
+    other = next(
+        e for e in ENDPOINTS.values()
+        if e.name != PRIMARY_ENDPOINT.name
+        and e.positive_outcomes != PRIMARY_ENDPOINT.positive_outcomes
+    )
+
+    primary = materialise_snapshot(
+        session, track.id, cutoff,
+        endpoint=PRIMARY_ENDPOINT,
+        history=build_history_index(session, PRIMARY_ENDPOINT),
+    )
+    secondary = materialise_snapshot(
+        session, track.id, cutoff,
+        endpoint=other,
+        history=build_history_index(session, other),
+    )
+
+    assert primary.id != secondary.id, (
+        "both endpoints resolved to one snapshot row, so endpoint is not part "
+        "of snapshot identity"
+    )
+    assert primary.endpoint == PRIMARY_ENDPOINT.name
+    assert secondary.endpoint == other.name
+    assert primary.evidence_revision != secondary.evidence_revision, (
+        "the evidence revision does not depend on the endpoint, so two "
+        "endpoints' snapshots could collide"
+    )
+    # Neither supersedes the other: they answer different questions.
+    assert primary.superseded_by_id is None
+    assert secondary.superseded_by_id is None
+    assert (primary.contributing_evidence_ids or {}).get(
+        "history_index_endpoint"
+    ) == PRIMARY_ENDPOINT.name
