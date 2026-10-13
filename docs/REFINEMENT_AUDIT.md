@@ -32,6 +32,46 @@ exercised against SQLite only.
 
 ---
 
+## 1a. Resolution status
+
+Added after implementation. "Fixed" means a regression test fails if it returns.
+
+| | Defect | Status | Where |
+|---|---|---|---|
+| D1 | Selection and final evaluation share one partition | **Fixed** | `validation/protocol.py`, `pipeline/develop.py`; label-permutation test |
+| D2 | Preprocessing fitted outside the inner folds | **Fixed** | `develop.fold_design`; fold-local median test |
+| D3 | Label maturity not enforced at the fitting origin | **Fixed** | `plan_split` purges 202 rows; maturity + cost tests |
+| D4 | Served quantity ≠ evaluated quantity | **Fixed** | `modeling/contract.py`, `uncertainty.py`, `service.py` |
+| D5 | Attribution check is self-referential | **Fixed** | `explain(served_probability=…)`; `external_check_ran` |
+| D6 | Skill reference is the evaluation set's own prevalence | **Fixed** | `deployable_reference_prediction`, `skill_against_reference`; both reported |
+| D7 | Activation automatic, status binary | **Fixed** | `pipeline/status.py`; default-deny, 7 status tests |
+| D8 | Snapshot identity omits evidence revision; overwrite mutates | **Fixed** | migration `b1c7e4f29a30`; supersession tests |
+| D9 | Historical-rate index hardcoded to the primary endpoint | **Fixed** | endpoint threaded; interchangeability test |
+| D10 | Calibration folds random-grouped, not forward-chaining | **Addressed, differently than proposed** | `calibration_scale_audit` chooses the pool by measured level and scale, and records the rejected one. Forward-chaining turned out to be the *wrong* pool here — see §2 D10 note |
+| D11 | `total` is a page count presented as a portfolio count | **Fixed** (entry corrected) | `n_returned`/`total_matching`/`has_more`, pagination, scoped `page_summary` |
+| D12 | Declared frontend lint script exits 1 | **Fixed** | eslint flat config; 7 real errors found and fixed |
+| D13 | Personal absolute paths in documentation | **Fixed** | 41 replaced |
+| D14 | Documentation figures stale | **Fixed** | all corrected against `make facts` |
+| D15 | Composite endpoint called "unconditional" | **Fixed** | `cohort/outcomes.py`, PRODUCT_SPEC, README |
+
+Defects found *during* implementation, not in the original audit:
+
+| | Defect | Status |
+|---|---|---|
+| D16 | Migration added the new unique constraint without dropping the one it replaced, so corrected evidence could not be stored | **Fixed**; `tests/statistical/test_migrations.py` runs Alembic against a fresh database and writes rows |
+| D17 | Selection metrics used a calibrator fitted on the rows it scored, forcing every candidate's slope to exactly 1.0 and disabling the gate's calibration band | **Fixed**; `cross_fitted_calibrated` |
+| D18 | Forward-chaining calibration pool over-weighted the later development years (rate 0.664 vs 0.631) and sat 0.33 below the final model's logit scale; cost 0.19 nats | **Fixed**; `calibration_scale_audit` |
+| D19 | Split manifest recorded partition counts but not row ids, so the artifact could not say which rows were evaluated | **Fixed** |
+| D20 | `SortHead` and `LeverGroup` defined inside render; React remounted their subtrees, dropping keyboard focus on every sort or lever tick | **Fixed**; both hoisted |
+| D21 | `aria-sort` on a `<button>`, where assistive technology ignores it | **Fixed**; moved to the `<th>` |
+| D22 | The coverage diagnostic's own first verdict called 96.1% coverage reassuring while the median interval was 0.66 wide and the bias +0.128 | **Fixed**; width, bias and miss-asymmetry qualifiers |
+
+Not done, and why, is in the handoff rather than here: the evidence-review
+workflow slice (Phase 2), exports, the two-layer reading UI, tenant-isolation
+tests and browser-level accessibility tests.
+
+---
+
 ## 2. Confirmed defects
 
 ### D1 — Selection and final evaluation share one partition (critical)
