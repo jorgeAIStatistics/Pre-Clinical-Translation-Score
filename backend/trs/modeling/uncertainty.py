@@ -57,6 +57,7 @@ import numpy as np
 from trs.features.transform import FeatureTransformer
 from trs.modeling.base import RiskModel, UncertaintyUnsupported, sigmoid
 from trs.modeling.calibration import Calibrator
+from trs.modeling.contract import MATERIAL_FUNCTIONAL_GAP
 
 #: Defaults chosen so a single score takes well under a second while the
 #: Monte-Carlo error on an interval endpoint stays below ~0.5 percentage points.
@@ -66,7 +67,16 @@ DEFAULT_N_PARAM_SAMPLES = 400
 
 @dataclasses.dataclass(slots=True)
 class UncertaintyResult:
+    #: **The served and evaluated quantity**: the calibrated plug-in
+    #: probability at median-imputed features and posterior-mean parameters.
+    #: See :mod:`trs.modeling.contract` for why this functional is primary.
     probability: float
+    #: The Monte-Carlo mean of the calibrated probability over imputation,
+    #: coefficient and calibration-parameter draws. Reported for comparison and
+    #: never substituted for ``probability``: it differs systematically rather
+    #: than noisily (Jensen), most for the least-evidenced programmes, and it
+    #: has no exact additive decomposition.
+    predictive_mean_probability: float
     interval_low: float
     interval_high: float
     interval_level: float
@@ -91,9 +101,16 @@ class UncertaintyResult:
     def dominant_source(self) -> str:
         return max(self.components_sd_logit, key=self.components_sd_logit.__getitem__)
 
+    @property
+    def functional_gap(self) -> float:
+        """``predictive_mean − probability``. Arithmetic, not biology."""
+        return self.predictive_mean_probability - self.probability
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "probability": self.probability,
+            "predictive_mean_probability": self.predictive_mean_probability,
+            "functional_gap": self.functional_gap,
             "interval_low": self.interval_low,
             "interval_high": self.interval_high,
             "interval_level": self.interval_level,
@@ -167,9 +184,20 @@ def predict_with_uncertainty(
         )
 
     probs = sigmoid(cal_draws).ravel()
-    point = float(np.mean(probs))
+    predictive_mean = float(np.mean(probs))
     lo, hi = _quantile_interval(probs, level)
     total_sd = float(np.std(cal_draws.ravel()))
+
+    # The *served* quantity: the calibrated plug-in probability. Computed from
+    # the point design matrix and the point calibration, with no draws, so it
+    # is reproducible without a seed and is exactly the functional the model's
+    # reported metrics were computed on.
+    #
+    # The predecessor returned `np.mean(probs)` here and called it
+    # `probability`, while training, validation and the driver attribution all
+    # used the plug-in value. Three quantities, one name.
+    plug_in_logit = _point_logit(model, X_point, groups)
+    plug_in = float(sigmoid(calibrator.transform_logit(plug_in_logit)).ravel()[0])
 
     # ---- 4. Ablation components (log-odds standard deviations) -------------
     point_kwargs = (
@@ -217,8 +245,19 @@ def predict_with_uncertainty(
             "the cost of imputing them."
         )
 
+    if abs(predictive_mean - plug_in) >= MATERIAL_FUNCTIONAL_GAP:
+        caveats.append(
+            f"The predictive mean over draws ({predictive_mean:.3f}) differs "
+            f"from the served plug-in probability ({plug_in:.3f}) by "
+            f"{predictive_mean - plug_in:+.3f}. This is an arithmetic "
+            "consequence of averaging a non-linear function over imputation "
+            "draws for unreported evidence, not a biological signal, and no "
+            "driver in the attribution corresponds to it."
+        )
+
     return UncertaintyResult(
-        probability=point,
+        probability=plug_in,
+        predictive_mean_probability=predictive_mean,
         interval_low=lo,
         interval_high=hi,
         interval_level=level,

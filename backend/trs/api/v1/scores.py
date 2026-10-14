@@ -56,6 +56,7 @@ def score_program(
             model_version=payload.model_version,
             interval_level=payload.interval_level,
             persist=payload.persist,
+            demo_context=payload.demo_context,
             user_id=principal.user_id,
             request_id=request.headers.get("x-request-id") if request else None,
         )
@@ -70,6 +71,10 @@ def score_program(
             "as_of": result.as_of_date.isoformat(),
             "probability": result.probability,
             "score_record_id": result.score_record_id,
+            "model_status": result.eligibility.get("model_status"),
+            "score_permitted": result.eligibility.get("permitted"),
+            "refusal_code": result.eligibility.get("refusal_code"),
+            "demo_context_requested": payload.demo_context,
         },
     )
     return ScoreOut.model_validate(result.to_dict())
@@ -81,10 +86,17 @@ def get_score(
     session: Session = Depends(get_db),
     principal: Principal = Depends(get_principal),
     as_of: dt.date | None = None,
+    demo_context: bool = False,
 ) -> ScoreOut:
-    """Convenience read-only scoring, for the UI's initial page load."""
+    """Convenience read-only scoring, for the UI's initial page load.
+
+    ``demo_context`` carries the same meaning as on the POST form: without it,
+    a model trained on synthetic data returns a refusal rather than a number.
+    """
     try:
-        result = _service(session).score_track(track_id, as_of=as_of, persist=False)
+        result = _service(session).score_track(
+            track_id, as_of=as_of, persist=False, demo_context=demo_context,
+        )
     except ScoringError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return ScoreOut.model_validate(result.to_dict())
@@ -120,13 +132,17 @@ def run_scenario(
         )
     service = _service(session)
     try:
-        current = service.score_track(track_id, as_of=payload.as_of, persist=False)
+        current = service.score_track(
+            track_id, as_of=payload.as_of, persist=False,
+            demo_context=payload.demo_context,
+        )
         scenario = service.score_track(
             track_id,
             as_of=payload.as_of,
             lever_keys=payload.lever_keys,
             overrides=payload.overrides,
             persist=False,
+            demo_context=payload.demo_context,
         )
     except ScenarioValidationError as exc:
         raise HTTPException(
@@ -155,6 +171,33 @@ def run_scenario(
             "scenario": scenario.probability,
         },
     )
+
+    # A scenario is a comparison of two numbers. When the eligibility policy
+    # declines to produce them, there is no comparison to return — and
+    # returning zeros, or nulls inside a shape that promises a delta, would
+    # invite a client to render "no change" where the truth is "no estimate".
+    if current.probability is None or scenario.probability is None:
+        refusal = (
+            current.eligibility
+            if current.probability is None
+            else scenario.eligibility
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "scenario_unavailable",
+                "reason": refusal.get("reason"),
+                "refusal_code": refusal.get("refusal_code"),
+                "model_status": refusal.get("model_status"),
+                "note": (
+                    "Scenario analysis compares model output under two "
+                    "evidence states. No score may be produced for this "
+                    "programme under this model, so there is nothing to "
+                    "compare. Evidence review, gaps and provenance remain "
+                    "available."
+                ),
+            },
+        )
 
     return ScenarioComparison(
         current=ScoreOut.model_validate(current.to_dict()),

@@ -126,10 +126,27 @@ class FeatureSnapshot(Base, IdMixin, TimestampMixin, SyntheticFlagMixin):
 
     __tablename__ = "feature_snapshot"
     __table_args__ = (
+        # Identity includes the evidence revision and the endpoint, not just
+        # the track, cutoff and schema.
+        #
+        # The predecessor keyed on (track, as_of, schema) and offered an
+        # `overwrite` flag that rewrote `features`, `missingness`,
+        # `vector_hash` and `built_at` in place. Any score already referencing
+        # that row then pointed at different numbers, which is the opposite of
+        # what the docstring claimed the constraint guaranteed. Corrected
+        # evidence must produce a *new* snapshot at the same scientific cutoff,
+        # so that an old assessment stays reproducible and a new one is
+        # available.
         UniqueConstraint(
-            "program_indication_id", "as_of_date", "feature_schema_version"
+            "program_indication_id", "as_of_date", "feature_schema_version",
+            "endpoint", "evidence_revision",
+            name="uq_feature_snapshot_identity",
         ),
         Index("ix_feature_snapshot_lookup", "program_indication_id", "as_of_date"),
+        Index(
+            "ix_feature_snapshot_revision",
+            "program_indication_id", "as_of_date", "endpoint", "evidence_revision",
+        ),
     )
 
     program_indication_id: Mapped[str] = mapped_column(
@@ -158,6 +175,34 @@ class FeatureSnapshot(Base, IdMixin, TimestampMixin, SyntheticFlagMixin):
     builder_version: Mapped[str] = mapped_column(String(32), nullable=False, default="0")
     #: SHA-256 over the sorted feature dict; detects silent drift.
     vector_hash: Mapped[str | None] = mapped_column(String(64), default=None)
+
+    #: SHA-256 over the content identity of every evidence row that
+    #: contributed: its id, its last modification time and its availability
+    #: date. Correcting one item, retracting one, or adding one that changes an
+    #: aggregate all change this value, and therefore produce a new snapshot
+    #: rather than mutating this one.
+    #:
+    #: Legacy rows written before this column existed carry
+    #: ``"legacy-unversioned"``: their evidence revision is genuinely unknown,
+    #: and recording that is more useful than back-filling a hash that would
+    #: imply it had been checked.
+    evidence_revision: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="legacy-unversioned", index=True
+    )
+    #: The endpoint whose resolved outcomes fed the historical-rate features.
+    #: Those features are endpoint-specific predictors, so a snapshot built for
+    #: one endpoint is not interchangeable with another's — which the
+    #: predecessor allowed, because it always used the primary endpoint's
+    #: labels whatever endpoint was being trained.
+    endpoint: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="ph2_efficacy_failure", index=True
+    )
+    #: Set when a later snapshot for the same track, cutoff, schema and
+    #: endpoint supersedes this one because the evidence changed. The row's
+    #: feature values are never altered; only this pointer is.
+    superseded_by_id: Mapped[str | None] = mapped_column(
+        ForeignKey("feature_snapshot.id", ondelete="SET NULL"), default=None
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

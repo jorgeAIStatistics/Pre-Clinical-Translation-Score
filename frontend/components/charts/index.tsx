@@ -286,19 +286,42 @@ export function DecisionCurve({
    Scenario comparison: two intervals on one scale.
    ─────────────────────────────────────────────────────────────────────────── */
 
+type ComparedEstimate = {
+  probability: number | null;
+  interval_low: number | null;
+  interval_high: number | null;
+};
+
 export function ScenarioComparisonChart({
   current, scenario, width = 460,
 }: {
-  current: { probability: number; interval_low: number; interval_high: number };
-  scenario: { probability: number; interval_low: number; interval_high: number };
+  current: ComparedEstimate;
+  scenario: ComparedEstimate;
   width?: number;
 }) {
+  // The scenario endpoint returns 409 rather than a comparison when either
+  // side has no estimate, so this should be unreachable — but accepting
+  // nullable inputs and drawing nothing is cheaper than an assertion that
+  // renders NaN geometry if the contract ever changes.
+  if (
+    current.probability === null || current.interval_low === null ||
+    current.interval_high === null || scenario.probability === null ||
+    scenario.interval_low === null || scenario.interval_high === null
+  ) {
+    return (
+      <p className="text-[12.5px] text-ink-500">
+        No comparison to draw: at least one side has no estimate.
+      </p>
+    );
+  }
+  const lo = { ...current } as Required<Record<keyof ComparedEstimate, number>>;
+  const hi = { ...scenario } as Required<Record<keyof ComparedEstimate, number>>;
   const m = { t: 22, r: 20, b: 30, l: 78 };
   const H = 112;
   const x = scaleLinear().domain([0, 1]).range([m.l, width - m.r]);
   const rows = [
-    { label: "Current", d: current, y: m.t + 12 },
-    { label: "Scenario", d: scenario, y: m.t + 48 },
+    { label: "Current", d: lo, y: m.t + 12 },
+    { label: "Scenario", d: hi, y: m.t + 48 },
   ];
 
   return (

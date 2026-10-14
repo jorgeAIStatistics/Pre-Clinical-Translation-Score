@@ -36,7 +36,20 @@ export default async function ProgramPage({ params }: { params: Promise<{ id: st
       api.safety(id),
     ]);
 
-  const explanation = score.explanation;
+  // A refused score is not a missing score: everything else on this page —
+  // evidence, the domain matrix, contradictions, comparators, provenance —
+  // remains exactly as useful. So the estimate section is conditional and the
+  // rest of the page is not.
+  const scored =
+    score.eligibility.permitted &&
+    score.probability !== null &&
+    score.interval_low !== null &&
+    score.interval_high !== null &&
+    score.uncertainty !== null;
+  const probability = score.probability;
+  const uncertainty = score.uncertainty;
+
+  const explanation = scored ? score.explanation : null;
   const cutoff = score.as_of_date;
 
   return (
@@ -95,7 +108,62 @@ export default async function ProgramPage({ params }: { params: Promise<{ id: st
         ) : null}
       </header>
 
-      {/* ── The estimate ───────────────────────────────────────────────── */}
+      {/* ── The estimate, or why there is none ─────────────────────────── */}
+      {!scored ? (
+        <Card>
+          <CardHeader
+            title="No risk estimate for this programme"
+            subtitle={score.estimand}
+            action={
+              <div className="text-right">
+                <div className="font-mono text-[11px] text-ink-400">
+                  {score.model_version}
+                </div>
+                <div className="font-mono text-[11px] text-ink-400">
+                  status: {score.eligibility.model_status}
+                </div>
+              </div>
+            }
+          />
+          <div className="p-5">
+            <Callout tone="warn" title="The model is not permitted to score this programme">
+              {/* `Prose` renders a <p>, so its children must be inline. A
+                  nested <p> is invalid HTML, and React's hydration pass
+                  reports it as a mismatch rather than silently reparenting. */}
+              <Prose>{score.eligibility.reason}</Prose>
+              {score.model_status?.rationale ? (
+                <Prose className="mt-2">{score.model_status.rationale}</Prose>
+              ) : null}
+            </Callout>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              <Stat
+                label="Refusal code"
+                value={
+                  <span className="font-mono text-[13px]">
+                    {score.eligibility.refusal_code ?? "—"}
+                  </span>
+                }
+              />
+              <Stat label="Model status" value={score.eligibility.model_status} />
+              <Stat
+                label="Evidence completeness"
+                value={pct(score.completeness.overall)}
+              />
+            </div>
+
+            <Prose className="mt-5">
+              What remains available below is everything that does not depend on
+              the model: the evidence assembled as of {shortDate(cutoff)}, which
+              domains it covers and which it does not, supporting and
+              contradicting items, historical comparators, and the full
+              provenance chain for every value. An evidence review is not a
+              weaker version of a score — it is the part of this analysis that
+              does not rest on a fitted model.
+            </Prose>
+          </div>
+        </Card>
+      ) : (
       <Card>
         <CardHeader
           title="Translational risk estimate"
@@ -117,14 +185,14 @@ export default async function ProgramPage({ params }: { params: Promise<{ id: st
               <span className="tnum font-mono text-[44px] leading-none text-ink-900">
                 {pct(score.probability)}
               </span>
-              <RiskBandLabel p={score.probability} />
+              <RiskBandLabel p={probability!} />
             </div>
 
             <div className="mt-4">
               <IntervalBar
-                low={score.interval_low}
-                high={score.interval_high}
-                point={score.probability}
+                low={score.interval_low!}
+                high={score.interval_high!}
+                point={probability!}
                 height={10}
                 showScale
               />
@@ -170,15 +238,15 @@ export default async function ProgramPage({ params }: { params: Promise<{ id: st
               <SectionLabel>Where the uncertainty comes from</SectionLabel>
               <div className="mt-3">
                 <UncertaintyComposition
-                  shares={score.uncertainty.variance_share}
-                  sds={score.uncertainty.components_sd_logit}
+                  shares={uncertainty!.variance_share}
+                  sds={uncertainty!.components_sd_logit}
                 />
               </div>
             </div>
 
-            {score.uncertainty.caveats.length ? (
+            {uncertainty!.caveats.length ? (
               <ul className="space-y-1.5">
-                {score.uncertainty.caveats.map((c, i) => (
+                {uncertainty!.caveats.map((c, i) => (
                   <li key={i} className="flex gap-2 text-[11.5px] leading-[1.55] text-ink-500">
                     <span aria-hidden className="mt-[2px] text-[10px] text-ink-400">△</span>
                     {c}
@@ -219,6 +287,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ id: st
           </div>
         ) : null}
       </Card>
+      )}
 
       {/* ── Drivers ────────────────────────────────────────────────────── */}
       {explanation ? (
@@ -348,7 +417,11 @@ export default async function ProgramPage({ params }: { params: Promise<{ id: st
         <Card>
           <CardHeader title="Risk drivers" />
           <EmptyState
-            title="No driver breakdown available"
+            title={
+              scored
+                ? "No driver breakdown available"
+                : "No estimate to attribute"
+            }
             detail={score.explanation_unavailable_reason ?? undefined}
           />
         </Card>
@@ -565,7 +638,22 @@ export default async function ProgramPage({ params }: { params: Promise<{ id: st
       </Card>
 
       {/* ── Scenario analysis ──────────────────────────────────────────── */}
-      <ScenarioPanel trackId={id} levers={levers.levers} current={score} />
+      {scored && probability !== null ? (
+        <ScenarioPanel trackId={id} levers={levers.levers} current={score} />
+      ) : (
+        <Card>
+          <CardHeader title="Scenario analysis" />
+          <EmptyState
+            title="Scenario analysis needs an estimate to vary"
+            detail={
+              "A scenario compares the model's output under two evidence " +
+              "states. With no estimate for the current state there is " +
+              "nothing to compare, so the comparison is withheld rather " +
+              "than shown as no change."
+            }
+          />
+        </Card>
+      )}
 
       {/* ── Provenance footer ──────────────────────────────────────────── */}
       <Card>
@@ -584,9 +672,17 @@ export default async function ProgramPage({ params }: { params: Promise<{ id: st
               ["Score record", <MonoId key="r" value={score.score_record_id ?? "not persisted"} />],
               ["As-of cutoff", shortDate(cutoff)],
               ["Computed", shortDate(score.computed_at)],
-              ["Uncertainty method", <span key="u" className="font-mono text-[11.5px]">{score.uncertainty.method}</span>],
+              ["Uncertainty method", <span key="u" className="font-mono text-[11.5px]">{uncertainty?.method ?? "not computed"}</span>],
               ["Draws", <span key="d" className="tnum font-mono text-[11.5px]">
-                {score.uncertainty.n_imputations} imputations × {score.uncertainty.n_param_samples} parameter samples
+                {uncertainty
+                  ? `${uncertainty.n_imputations} imputations × ${uncertainty.n_param_samples} parameter samples`
+                  : "—"}
+              </span>],
+              ["Served quantity", <span key="q" className="font-mono text-[11.5px]">
+                {score.prediction_contract?.functional ?? "none"}
+              </span>],
+              ["Split protocol", <span key="p" className="font-mono text-[11.5px]">
+                {score.model_status?.status ?? "unknown"}
               </span>],
             ]}
           />

@@ -197,6 +197,98 @@ def cmd_oracle(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_coverage(args: argparse.Namespace) -> int:
+    """Measure how often the published interval contains the true probability.
+
+    Only meaningful on the synthetic demonstration cohort, where the generator
+    recorded the probability it actually used. The result establishes that the
+    implementation propagates the uncertainty it claims to under a known
+    data-generating process; it says nothing about real programmes.
+    """
+    import datetime as dt
+
+    from sqlalchemy import select
+
+    from trs.db.models.analytics import CohortEntry, CohortVersion
+    from trs.db.session import session_scope
+    from trs.scoring.service import ScoringService
+    from trs.seed.diagnostics import load_ground_truth
+    from trs.validation.coverage import interval_coverage
+
+    truth = load_ground_truth()
+    if not truth:
+        _print({
+            "available": False,
+            "reason": (
+                "No simulation ground-truth file. Coverage against a true "
+                "probability can only be measured on synthetic data; re-run "
+                "seeding, or accept that this check is unavailable on a real "
+                "corpus."
+            ),
+        })
+        return 0
+
+    with session_scope() as session:
+        cohort = (
+            session.get(CohortVersion, args.cohort) if args.cohort
+            else session.scalars(
+                select(CohortVersion).order_by(CohortVersion.built_at.desc()).limit(1)
+            ).first()
+        )
+        if cohort is None:
+            _print({"available": False, "reason": "No cohort version."})
+            return 1
+
+        service = ScoringService(session)
+        artifact = service.active_artifact(args.endpoint)
+        manifest = (artifact.metrics or {}).get("protocol", {}).get("split_manifest", {})
+        evaluation_ids = set(manifest.get("evaluation_row_ids") or [])
+
+        entries = list(session.scalars(
+            select(CohortEntry).where(CohortEntry.cohort_version_id == cohort.id)
+        ))
+        if evaluation_ids:
+            entries = [e for e in entries if e.id in evaluation_ids]
+            scope = "evaluation partition"
+        else:
+            scope = "whole cohort (the artifact records no evaluation row ids)"
+
+        predicted, low, high, true_p = [], [], [], []
+        skipped = 0
+        for entry in entries:
+            tp = truth.get(entry.program_indication_id)
+            if tp is None:
+                skipped += 1
+                continue
+            result = service.score_track(
+                entry.program_indication_id, as_of=entry.as_of_date,
+                endpoint=args.endpoint, persist=False, compare_families=False,
+                demo_context=True,
+            )
+            if result.probability is None:
+                skipped += 1
+                continue
+            predicted.append(result.probability)
+            low.append(result.interval_low)
+            high.append(result.interval_high)
+            true_p.append(tp)
+
+        if not predicted:
+            _print({
+                "available": False,
+                "reason": f"No scorable rows ({skipped} skipped).",
+            })
+            return 1
+
+        payload = interval_coverage(predicted, low, high, true_p).to_dict()
+        payload["scope_of_rows"] = scope
+        payload["model_version"] = artifact.version
+        payload["n_skipped"] = skipped
+        payload["generated_at"] = dt.datetime.now(dt.UTC).isoformat()
+        _print(payload)
+    return 0
+
+
 def cmd_model_info(args: argparse.Namespace) -> int:
     from sqlalchemy import select
 
@@ -275,6 +367,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("oracle", help="Maximum attainable performance on the demo cohort.")
     sp.add_argument("--cohort", default=None)
     sp.set_defaults(func=cmd_oracle)
+
+    sp = sub.add_parser(
+        "coverage",
+        help="Does the published interval contain the simulation's true probability?",
+    )
+    sp.add_argument("--cohort", default=None)
+    sp.add_argument("--endpoint", default="ph2_efficacy_failure")
+    sp.set_defaults(func=cmd_coverage)
 
     sp = sub.add_parser("models", help="List registered model artifacts.")
     sp.set_defaults(func=cmd_model_info)

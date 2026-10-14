@@ -18,8 +18,64 @@ import { useState, useTransition } from "react";
 
 import { ScenarioComparisonChart } from "@/components/charts";
 import { Badge, Callout, Card, CardHeader, Prose, SectionLabel } from "@/components/primitives";
+import { DEMO_CONTEXT } from "@/lib/config";
 import { pct, signedPct } from "@/lib/format";
 import type { ScenarioComparison, ScenarioLever, ScoreOut } from "@/lib/types";
+
+/**
+ * One group of scenario levers.
+ *
+ * Defined at module scope rather than inside `ScenarioPanel`'s render. A
+ * component created during render gets a fresh identity each render, so React
+ * tears down and rebuilds its subtree instead of updating it — which here
+ * destroys and recreates every checkbox on each keystroke of state. A keyboard
+ * user ticking one lever loses focus, and `react-hooks/static-components`
+ * reports it. The frontend had no linter configured to see it.
+ */
+function LeverGroup({
+  items, label, selected, onToggle,
+}: {
+  items: ScenarioLever[];
+  label: string;
+  selected: string[];
+  onToggle: (key: string) => void;
+}) {
+  return (
+    <div>
+      <SectionLabel>{label}</SectionLabel>
+      <ul className="mt-2 space-y-1.5">
+        {items.map((lv) => {
+          const on = selected.includes(lv.key);
+          return (
+            <li key={lv.key}>
+              <label
+                className={`flex cursor-pointer gap-2.5 rounded-[3px] border px-2.5 py-2 transition-colors ${
+                  on
+                    ? "border-accent-300 bg-accent-50"
+                    : "border-transparent hover:border-ink-200 hover:bg-ink-50"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={on}
+                  onChange={() => onToggle(lv.key)}
+                  className="mt-[3px] h-3.5 w-3.5 shrink-0 accent-[var(--color-accent-600)]"
+                />
+                <span className="min-w-0">
+                  <span className="block text-[12.5px] font-medium text-ink-800">{lv.label}</span>
+                  <span className="mt-0.5 block text-[11.5px] leading-[1.5] text-ink-500">
+                    {lv.description}
+                  </span>
+                  <span className="mt-1 block text-[10.5px] text-ink-400">{lv.domain_label}</span>
+                </span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
 
 export function ScenarioPanel({
   trackId, levers, current,
@@ -44,12 +100,28 @@ export function ScenarioPanel({
           {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ lever_keys: selected, overrides: {} }),
+            body: JSON.stringify({
+              lever_keys: selected,
+              overrides: {},
+              // The backend refuses to score with a synthetic-trained
+              // model unless the caller declares a demonstration
+              // context. This surface is one and labels itself as one.
+              demo_context: DEMO_CONTEXT,
+            }),
           },
         );
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body.detail ?? `Request failed (${res.status})`);
+          // A 409 carries a structured refusal rather than a message string;
+          // `String(detail)` on that object would show "[object Object]".
+          const detail = body.detail;
+          const message =
+            typeof detail === "string"
+              ? detail
+              : typeof detail?.reason === "string"
+                ? detail.reason
+                : `Request failed (${res.status})`;
+          throw new Error(message);
         }
         setResult(await res.json());
       } catch (e) {
@@ -61,41 +133,6 @@ export function ScenarioPanel({
 
   const reset = () => { setSelected([]); setResult(null); setError(null); };
 
-  const LeverGroup = ({ items, label }: { items: ScenarioLever[]; label: string }) => (
-    <div>
-      <SectionLabel>{label}</SectionLabel>
-      <ul className="mt-2 space-y-1.5">
-        {items.map((lv) => {
-          const on = selected.includes(lv.key);
-          return (
-            <li key={lv.key}>
-              <label
-                className={`flex cursor-pointer gap-2.5 rounded-[3px] border px-2.5 py-2 transition-colors ${
-                  on
-                    ? "border-accent-300 bg-accent-50"
-                    : "border-transparent hover:border-ink-200 hover:bg-ink-50"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={on}
-                  onChange={() => toggle(lv.key)}
-                  className="mt-[3px] h-3.5 w-3.5 shrink-0 accent-[var(--color-accent-600)]"
-                />
-                <span className="min-w-0">
-                  <span className="block text-[12.5px] font-medium text-ink-800">{lv.label}</span>
-                  <span className="mt-0.5 block text-[11.5px] leading-[1.5] text-ink-500">
-                    {lv.description}
-                  </span>
-                  <span className="mt-1 block text-[10.5px] text-ink-400">{lv.domain_label}</span>
-                </span>
-              </label>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
 
   return (
     <Card>
@@ -116,8 +153,18 @@ export function ScenarioPanel({
 
       <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
         <div className="space-y-5">
-          <LeverGroup items={improvement} label="If additional evidence arrives" />
-          <LeverGroup items={adverse} label="If the evidence turns against it" />
+          <LeverGroup
+            items={improvement}
+            label="If additional evidence arrives"
+            selected={selected}
+            onToggle={toggle}
+          />
+          <LeverGroup
+            items={adverse}
+            label="If the evidence turns against it"
+            selected={selected}
+            onToggle={toggle}
+          />
           <button
             onClick={run}
             disabled={!selected.length || pending}

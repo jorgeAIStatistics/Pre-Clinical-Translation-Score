@@ -7,19 +7,32 @@ import { pct } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export default async function PortfolioPage() {
-  const portfolio = await api.portfolio({ limit: 60, score: true });
+const PAGE_SIZE = 60;
 
-  const scored = portfolio.rows.filter((r) => r.probability !== null);
-  const meanRisk = scored.length
-    ? scored.reduce((a, r) => a + (r.probability ?? 0), 0) / scored.length
-    : null;
-  const meanWidth = scored.length
-    ? scored.reduce((a, r) => a + ((r.interval_high ?? 0) - (r.interval_low ?? 0)), 0) / scored.length
-    : null;
-  const lowConfidence = scored.filter(
-    (r) => r.evidence_confidence === "low" || r.evidence_confidence === "very_low",
-  ).length;
+export default async function PortfolioPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page } = await searchParams;
+  const pageNumber = Math.max(1, Number.parseInt(page ?? "1", 10) || 1);
+  const offset = (pageNumber - 1) * PAGE_SIZE;
+
+  const portfolio = await api.portfolio({
+    limit: PAGE_SIZE,
+    offset,
+    score: true,
+  });
+
+  // Summaries come from the server, which computed them over this page and
+  // says so in `page_summary.scope`. Recomputing them here from `rows` would
+  // produce the same numbers under a label the page chose for itself — which
+  // is how the previous version came to describe a 60-row mean as covering
+  // "every program in the portfolio".
+  const summary = portfolio.page_summary;
+  const firstRow = portfolio.total_matching === 0 ? 0 : offset + 1;
+  const lastRow = offset + portfolio.n_returned;
+  const refused = summary.n_refused_on_page;
 
   return (
     <div className="space-y-6">
@@ -29,26 +42,55 @@ export default async function PortfolioPage() {
             {portfolio.project_name ?? "Portfolio"}
           </h1>
           <Prose className="mt-2">
-            Translational-risk estimates for every program in the portfolio, each
-            computed as of its own development decision date using only evidence
-            available at that point.
+            Each programme is assessed as of its own development decision date,
+            using only evidence available at that point. Showing{" "}
+            <span className="tnum font-mono">{firstRow}</span>–
+            <span className="tnum font-mono">{lastRow}</span> of{" "}
+            <span className="tnum font-mono">{portfolio.total_matching}</span>{" "}
+            matching programmes; the summaries beside this describe this page,
+            not the whole portfolio.
           </Prose>
         </div>
         <dl className="flex gap-8">
-          <Stat label="Programs" value={portfolio.total} />
-          <Stat label="Mean estimate" value={pct(meanRisk)} hint="Across scored programs" />
           <Stat
-            label="Mean interval width"
-            value={pct(meanWidth)}
-            hint="Absolute, 95% level"
+            label="Programmes"
+            value={portfolio.total_matching}
+            hint={`${portfolio.n_returned} on this page`}
           />
           <Stat
-            label="Low confidence"
-            value={`${lowConfidence}`}
-            hint="Thin or incomplete evidence"
+            label="Mean estimate"
+            value={pct(summary.mean_probability)}
+            hint={`${summary.n_scored_on_page} scored on this page`}
+          />
+          <Stat
+            label="Mean interval width"
+            value={pct(summary.mean_interval_width)}
+            hint="Absolute, 95% level, this page"
+          />
+          <Stat
+            label={refused ? "No estimate" : "Low confidence"}
+            value={`${refused || summary.n_low_confidence_on_page}`}
+            hint={
+              refused
+                ? "Model not permitted to score"
+                : "Thin or incomplete evidence, this page"
+            }
           />
         </dl>
       </header>
+
+      {refused ? (
+        <Callout tone="warn" title="No estimates on this page">
+          <p>
+            The active model is not permitted to score{" "}
+            <span className="tnum font-mono">{refused}</span> of{" "}
+            <span className="tnum font-mono">{portfolio.n_returned}</span>{" "}
+            programmes on this page. Evidence counts, completeness and
+            provenance are unaffected; open a programme to see which evidence
+            domains are covered and which are not.
+          </p>
+        </Callout>
+      ) : null}
 
       <Callout tone="neutral" title="What this number is">
         <p className="mb-2">{portfolio.estimand}</p>
@@ -86,6 +128,56 @@ export default async function PortfolioPage() {
           }
         />
         <PortfolioTable rows={portfolio.rows} />
+
+        {/* Pagination. Server-rendered links rather than client state, so a
+            page is addressable, shareable and survives a reload — and so the
+            row range in the header always matches the rows below it. */}
+        {portfolio.total_matching > portfolio.n_returned ? (
+          <nav
+            aria-label="Portfolio pages"
+            className="flex items-center justify-between gap-4 border-t border-ink-200 px-5 py-3"
+          >
+            <span className="tnum text-[12px] text-ink-500">
+              Rows {firstRow}–{lastRow} of {portfolio.total_matching}
+            </span>
+            <span className="flex items-center gap-2">
+              {pageNumber > 1 ? (
+                <Link
+                  href={`/?page=${pageNumber - 1}`}
+                  className="rounded border border-ink-200 px-3 py-1.5 text-[12.5px] text-ink-700 hover:bg-ink-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600"
+                >
+                  ← Previous
+                </Link>
+              ) : (
+                <span
+                  aria-disabled="true"
+                  className="rounded border border-ink-100 px-3 py-1.5 text-[12.5px] text-ink-300"
+                >
+                  ← Previous
+                </span>
+              )}
+              <span className="tnum px-1 text-[12px] text-ink-500">
+                page {pageNumber} of{" "}
+                {Math.max(1, Math.ceil(portfolio.total_matching / PAGE_SIZE))}
+              </span>
+              {portfolio.has_more ? (
+                <Link
+                  href={`/?page=${pageNumber + 1}`}
+                  className="rounded border border-ink-200 px-3 py-1.5 text-[12.5px] text-ink-700 hover:bg-ink-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600"
+                >
+                  Next →
+                </Link>
+              ) : (
+                <span
+                  aria-disabled="true"
+                  className="rounded border border-ink-100 px-3 py-1.5 text-[12.5px] text-ink-300"
+                >
+                  Next →
+                </span>
+              )}
+            </span>
+          </nav>
+        ) : null}
       </Card>
     </div>
   );

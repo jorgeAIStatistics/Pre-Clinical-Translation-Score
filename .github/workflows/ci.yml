@@ -1,0 +1,107 @@
+# Continuous integration.
+#
+# This repository argues that correctness should be enforced rather than
+# asserted. Until this file existed, the test results quoted in its pull
+# requests and its README were run on one laptop and taken on trust — which is
+# the same category of claim the project spends 300 tests refusing to make
+# about its model.
+#
+# What runs here is exactly what `make lint` and the documented test command
+# run locally. Nothing is skipped to keep CI green: a check that cannot pass
+# should fail here, visibly, rather than be left out.
+#
+# On the Python version. The matrix pins 3.14 alone, because 3.14.5 is the only
+# interpreter the suite has actually been run on and the one recorded in the
+# model artifact's `library_versions`. `backend/pyproject.toml` declares
+# `requires-python = ">=3.11"`, which is a *compatibility* claim that nothing
+# verifies. Adding 3.11 and 3.12 here would be the right way to check it — and
+# would be asserting, before the fact, that they work. If the floor matters,
+# add them in a separate change and let CI settle it; if it does not, raise the
+# floor in pyproject to match reality.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Read-only. Nothing here needs to write to the repository, and a token that
+# cannot write cannot be made to.
+permissions:
+  contents: read
+
+# A new push supersedes an in-flight run on the same ref.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend — ruff, pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install backend (editable, with dev extras)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "backend[dev]"
+
+      - name: Ruff
+        working-directory: backend
+        run: ruff check trs tests
+
+      # No network is used by any test: connectors are exercised against
+      # recorded fixtures, and every database is created in-process. A test
+      # that needs the internet to pass is a test that will fail here, which is
+      # the intended behaviour rather than a problem to work around.
+      # Identical to `make test`, so a green tick here means the documented
+      # command passes rather than some CI-only variant of it.
+      - name: Pytest
+        working-directory: backend
+        run: pytest tests
+
+  frontend:
+    name: Frontend — eslint, tsc, next build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install (locked)
+        working-directory: frontend
+        run: npm ci
+
+      # `next lint` was removed in Next.js 16; this runs the ESLint CLI against
+      # the flat config, which is what `package.json` now declares.
+      - name: ESLint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: TypeScript
+        working-directory: frontend
+        run: npm run typecheck
+
+      # Every route is `force-dynamic`, so the build prerenders nothing and
+      # needs no API. Verified by building against an unreachable base URL
+      # before this workflow was written — if that ever stops being true, this
+      # step is where it will show up.
+      - name: Build
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:9
+        run: npm run build

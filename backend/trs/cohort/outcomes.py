@@ -27,10 +27,17 @@ estimand is therefore:
 
 That conditional is stated verbatim on the Methods page and in the API
 response, because a user who reads the number as unconditional will
-under-estimate total attrition. The composite secondary endpoint
-``ph2_any_scientific_failure`` exists precisely so the unconditional scientific
-attrition question can also be asked, and ``trs.modeling.competing_risks``
-provides the cumulative-incidence view when the data support it.
+under-estimate total attrition.
+
+The composite secondary endpoint ``ph2_any_scientific_failure`` widens the
+*cause* — efficacy, safety or PK/PD rather than efficacy alone — but it is
+**still conditional**, because it continues to exclude commercial and strategic
+discontinuations. Its own ``estimand`` field says so; this docstring previously
+called it "the unconditional scientific attrition question", which overclaimed.
+No endpoint defined here is unconditional, and none can be while sponsors stop
+programmes for reasons that are not statements about the biology.
+``trs.modeling.competing_risks`` provides the cumulative-incidence view when the
+data support it.
 
 Follow-up and censoring
 -----------------------

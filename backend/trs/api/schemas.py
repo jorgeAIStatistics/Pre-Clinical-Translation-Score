@@ -184,7 +184,15 @@ class EvidenceMatrix(ApiModel):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class UncertaintyOut(ApiModel):
+    #: The served and evaluated quantity: the calibrated plug-in probability.
     probability: float
+    #: The Monte-Carlo mean over imputation, coefficient and
+    #: calibration-parameter draws. Reported for comparison, never substituted:
+    #: it has no exact additive decomposition and the metrics do not describe
+    #: it.
+    predictive_mean_probability: float
+    #: ``predictive_mean − probability``. Arithmetic, not biology.
+    functional_gap: float
     interval_low: float
     interval_high: float
     interval_level: float
@@ -224,7 +232,17 @@ class ExplanationOut(ApiModel):
     decreasing_risk: list[DriverOut]
     by_domain: list[dict[str, Any]]
     other_factors_contribution: float
+    #: Internal: the terms partition the linear predictor. Both sides derive
+    #: from the same terms, so this alone proves little.
     reconstruction_error: float
+    #: External: ``|served − reconstructed|``. ``null`` means the check did not
+    #: run, which is not the same as it having passed — and it is the only one
+    #: of the two that can catch a decomposition of the wrong quantity.
+    served_reconstruction_error: float | None = None
+    external_check_ran: bool = False
+    explained_quantity: str | None = None
+    explained_quantity_description: str | None = None
+    calibration_scale: str | None = None
     method: str
     statement: str
 
@@ -238,11 +256,24 @@ class ScoreOut(ApiModel):
     estimand: str
     model_version: str
     model_family: str
-    probability: float
-    interval_low: float
-    interval_high: float
+    #: ``null`` when the eligibility policy declined to produce a score. A
+    #: refusal is the absence of a number, not a zero and not a wide interval;
+    #: `eligibility.refusal_code` says why in machine-readable form. A client
+    #: that renders `probability` without checking it will show "null", which
+    #: is a better failure than showing a number that should not exist.
+    probability: float | None = None
+    interval_low: float | None = None
+    interval_high: float | None = None
     interval_level: float
-    uncertainty: UncertaintyOut
+    uncertainty: UncertaintyOut | None = None
+    #: Always present. Carries `permitted`, `model_status`, `refusal_code`,
+    #: `reason` and `is_demonstration`.
+    eligibility: dict[str, Any]
+    #: What the served number is, and how it differs from the predictive mean.
+    #: ``null`` when no score was produced.
+    prediction_contract: dict[str, Any] | None = None
+    #: The model's derived status and the versioned criteria behind it.
+    model_status: dict[str, Any] = Field(default_factory=dict)
     explanation: ExplanationOut | None = None
     explanation_unavailable_reason: str | None = None
     completeness: dict[str, Any]
@@ -270,6 +301,17 @@ class ScoreRequest(ApiModel):
     model_version: str | None = None
     interval_level: float = Field(default=0.95, ge=0.5, le=0.999)
     persist: bool = True
+    demo_context: bool = Field(
+        default=False,
+        description=(
+            "Set true to request a score from a model trained on synthetic "
+            "demonstration data. There is no default-on and no server-side "
+            "override: a demonstration number should exist only because a "
+            "caller asked for one in a context that says so. A "
+            "synthetic-trained model asked to score real (non-synthetic) "
+            "evidence is refused whatever this flag says."
+        ),
+    )
 
 
 class ScenarioRequest(ApiModel):
@@ -287,6 +329,13 @@ class ScenarioRequest(ApiModel):
     as_of: dt.date | None = None
     name: str | None = None
     persist_scenario: bool = False
+    demo_context: bool = Field(
+        default=False,
+        description=(
+            "As on ScoreRequest: required to obtain numbers from a model "
+            "trained on synthetic demonstration data."
+        ),
+    )
 
 
 class ScenarioComparison(ApiModel):
@@ -345,9 +394,14 @@ class PortfolioRow(ApiModel):
     sponsor: str | None = None
     stage: str
     as_of_date: dt.date
+    #: null both when scoring was not requested and when it was refused.
+    #: `score_permitted` distinguishes the two.
     probability: float | None = None
     interval_low: float | None = None
     interval_high: float | None = None
+    #: null when scoring was not requested; false when it was refused.
+    score_permitted: bool | None = None
+    refusal_code: str | None = None
     evidence_confidence: str | None = None
     completeness: float | None = None
     top_risk_driver: str | None = None
@@ -365,7 +419,23 @@ class PortfolioResponse(ApiModel):
     endpoint: str
     estimand: str
     rows: list[PortfolioRow]
-    total: int
+    #: Rows on this page. Formerly misnamed `total`, which reported
+    #: `len(rows)` — the page size — while reading as the portfolio size, so
+    #: 705 of 765 programmes were invisible with no indication that they
+    #: existed.
+    n_returned: int
+    #: Programmes matching the active filters, independent of pagination. This
+    #: is the portfolio-level denominator.
+    total_matching: int
+    page_offset: int
+    page_limit: int
+    has_more: bool
+    #: Summaries over the rows **on this page**, not the whole portfolio.
+    #: Scoring every matching programme on each request would mean hundreds of
+    #: Monte-Carlo runs per page load, so these are page-level by design and
+    #: say so in their own payload rather than being presented as portfolio
+    #: aggregates by a caller that cannot tell the difference.
+    page_summary: dict[str, Any] = Field(default_factory=dict)
     is_demonstration: bool
     demonstration_note: str | None = None
     model_usefulness: dict[str, Any] = Field(default_factory=dict)
@@ -410,6 +480,22 @@ class ValidationReportOut(ApiModel):
     target_grouped_sensitivity: dict[str, Any] = Field(default_factory=dict)
     hyperparameter_selection: dict[str, Any] = Field(default_factory=dict)
     usefulness: dict[str, Any] = Field(default_factory=dict)
+    #: The named split protocol, its manifest hash, every protocol rejected and
+    #: why, and the forward-chaining folds. A metric whose protocol is unknown
+    #: cannot be interpreted.
+    protocol: dict[str, Any] = Field(default_factory=dict)
+    #: Which prediction functional the metrics below describe. Must match the
+    #: functional the scoring route returns.
+    prediction_contract: dict[str, Any] = Field(default_factory=dict)
+    #: The deployable intercept-only competitor and why it is not the
+    #: evaluation set's own prevalence.
+    reference_model: dict[str, Any] = Field(default_factory=dict)
+    #: Whether the calibrator was fitted on the level and logit scale it is
+    #: applied to.
+    calibration_audit: dict[str, Any] = Field(default_factory=dict)
+    #: Derived model status and the versioned promotion criteria behind it.
+    status: dict[str, Any] = Field(default_factory=dict)
+    promotion_criteria: dict[str, Any] = Field(default_factory=dict)
     limitations: list[str]
     oracle_benchmark: dict[str, Any] | None = None
 

@@ -17,13 +17,26 @@ session scope. The helpers used are the same ones ``conftest`` uses.
 
 Why the seed is larger than the 60 programs ``seeded_session`` uses
 ------------------------------------------------------------------
-Training is not a formality here: the model-selection gate in
-``trs.pipeline.select`` rejects a candidate whose held-out calibration slope is
-outside the sanity band. At 60 programs the temporal split leaves ~14 test rows,
-the recalibrator separates, the slope explodes, and training fails by design.
-``N_SEED_PROGRAMS`` is the smallest round size observed to produce a model that
-clears the gate, which keeps the scoring tests honest — they run against a model
-that passed the same gate production models pass.
+Training is not a formality here. Two gates must be cleared with real data.
+
+``trs.pipeline.select`` rejects a candidate whose calibration slope is outside
+the sanity band; at 60 programs the recalibrator separates and the slope
+explodes.
+
+``trs.validation.protocol.plan_training`` then requires a development partition
+of at least 120 rows, an evaluation partition of at least 60, and at least
+three usable forward-chaining folds — *after* purging rows whose outcome had
+not resolved by the fitting origin. Label maturity is the expensive constraint:
+it removes roughly half the otherwise-eligible development rows, because the
+median outcome lag exceeds five years.
+
+``N_SEED_PROGRAMS`` is the smallest round size observed to satisfy
+``temporal_outer_maturity`` — the same protocol the production demonstration
+run accepts. That matters more than the fixture's speed: a smaller seed would
+only satisfy ``retrospective``, and the scoring tests would then be exercising
+a protocol path production does not use. The thresholds in
+``trs.validation.protocol`` are deliberately not lowered for tests; a test that
+cannot meet them is told to supply more data.
 
 Offline
 -------
@@ -44,8 +57,20 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-#: Programs to seed. See the module docstring for why this is not 60.
-N_SEED_PROGRAMS = 150
+#: Programs to seed. See the module docstring for why this is not 60 — and why
+#: it is not 150, which was enough for the predecessor's split but leaves only
+#: 39 label-mature development rows under the current protocol. 480 satisfies
+#: the protocol's row counts and then fails the selection gate with a
+#: calibration slope of −0.147: 121 development rows against ~110 encoded
+#: columns is a degenerate fit, and the gate is right to refuse it. 700 yields
+#: 187 development and 140 evaluation rows and clears both gates in ~4 s.
+N_SEED_PROGRAMS = 700
+
+#: Protocol names ``trs.validation.protocol`` can accept. A number whose
+#: provenance names none of these cannot be interpreted.
+DECLARED_PROTOCOLS = frozenset({
+    "strict_temporal", "temporal_outer_maturity", "retrospective",
+})
 
 #: The four verdicts ``trs.pipeline.train._usefulness_verdict`` can return.
 #: A fifth value appearing here means an unreviewed claim about the model's
@@ -181,9 +206,44 @@ def api_env(tmp_path_factory) -> ApiEnv:
         app.dependency_overrides[get_db] = _override_get_db
         with TestClient(app) as client:
             env.client = client
-            response = client.get("/api/v1/programs", params={"limit": 500})
-            assert response.status_code == 200, response.text
-            env.tracks = response.json()
+            # Page through the whole listing rather than asking for one
+            # oversized page. `/api/v1/programs` caps `limit` at 500, so a
+            # single request silently truncated the fixture's view of the
+            # cohort once the seed grew past that — and every test that
+            # compares a filtered listing against `api_env.tracks` inherited
+            # the truncation as a false expectation.
+            page_size = 200
+            collected: list[dict[str, Any]] = []
+            seen: set[str] = set()
+            while True:
+                response = client.get(
+                    "/api/v1/programs",
+                    params={"limit": page_size, "offset": len(collected)},
+                )
+                assert response.status_code == 200, response.text
+                page = response.json()
+                collected.extend(page)
+                if len(page) < page_size:
+                    break
+                assert len(collected) <= 5000, "pagination did not terminate"
+            for row in collected:
+                assert row["id"] not in seen, (
+                    f"track {row['id']} was returned on two pages; the "
+                    "listing's ordering is not stable under offset"
+                )
+                seen.add(row["id"])
+
+            # Cross-check the paginated total against the database, so a
+            # listing that drops rows at a page boundary cannot pass as a
+            # complete view.
+            from trs.db.models.core import ProgramIndication as _PI
+
+            expected_total = session.query(_PI).count()
+            assert len(collected) == expected_total, (
+                f"paginated listing returned {len(collected)} tracks but the "
+                f"database holds {expected_total}"
+            )
+            env.tracks = collected
             yield env
     finally:
         app.dependency_overrides.clear()
@@ -598,9 +658,22 @@ def test_evidence_matrix_is_internally_consistent(
 
 @pytest.fixture(scope="session")
 def score(client: TestClient, scorable_track: dict[str, Any]) -> dict[str, Any]:
-    response = client.post(f"/api/v1/programs/{scorable_track['id']}/score", json={})
+    """A score obtained in an explicitly selected demonstration context.
+
+    The fixture model is trained on synthetic data, so `demo_context` is
+    required. ``test_score_is_refused_without_a_demonstration_context`` covers
+    the other branch — without this flag the API returns a refusal, and that is
+    the behaviour the eligibility policy exists to produce.
+    """
+    response = client.post(
+        f"/api/v1/programs/{scorable_track['id']}/score",
+        json={"demo_context": True},
+    )
     assert response.status_code == 200, response.text
-    return response.json()
+    body = response.json()
+    assert body["probability"] is not None
+    assert body["eligibility"]["permitted"] is True
+    return body
 
 
 def test_score_returns_an_ordered_interval(
@@ -765,7 +838,7 @@ def test_scenario_returns_both_sides_of_the_comparison(
     """
     response = client.post(
         f"/api/v1/programs/{scorable_track['id']}/scenarios",
-        json={"lever_keys": ["independent_replication"]},
+        json={"lever_keys": ["independent_replication"], "demo_context": True},
     )
     assert response.status_code == 200, response.text
     body = response.json()
@@ -811,7 +884,10 @@ def test_scenario_levers_cannot_make_a_program_look_worse(
     """
     response = client.post(
         f"/api/v1/programs/{scorable_track['id']}/scenarios",
-        json={"lever_keys": ["independent_replication", "multi_lab_replication"]},
+        json={
+            "lever_keys": ["independent_replication", "multi_lab_replication"],
+            "demo_context": True,
+        },
     )
     assert response.status_code == 200, response.text
     body = response.json()
@@ -910,9 +986,21 @@ def test_validation_report_publishes_the_unflattering_numbers(
     report = response.json()
 
     assert report["model_version"] == api_env.model_version
-    assert "Temporal split" in report["evaluation_design"]["split"]
-    assert report["evaluation_design"]["sizes"]["test"] > 0
     assert report["cohort"]["n_entries"] > 0
+
+    # The split description must name a declared protocol, not merely describe
+    # a date boundary. A reader who cannot tell which protocol produced a
+    # number cannot tell whether it may be read as deployment performance.
+    design = report["evaluation_design"]
+    assert any(
+        proto in design["split"] for proto in DECLARED_PROTOCOLS
+    ), f"split description names no declared protocol: {design['split']!r}"
+    sizes = design["sizes"]
+    assert sizes["development"] > 0
+    assert sizes["evaluation"] > 0
+    # Selection must have happened on fewer rows than the whole cohort and must
+    # not have been given the evaluation partition.
+    assert 0 < sizes["n_selection_rows"] <= sizes["development"]
 
     usefulness = report["usefulness"]
     assert usefulness["verdict"] in USEFULNESS_VERDICTS
@@ -927,7 +1015,7 @@ def test_validation_report_publishes_the_unflattering_numbers(
     assert "base rate" in usefulness["headline"]
 
     primary = report["primary_metrics"]
-    assert primary["n"] == report["evaluation_design"]["sizes"]["test"]
+    assert primary["n"] == report["evaluation_design"]["sizes"]["evaluation"]
     assert 0.0 <= primary["discrimination"]["auroc"]["value"] <= 1.0
     assert 0.0 <= primary["accuracy"]["brier"]["value"] <= 1.0
     assert 0.0 <= primary["prevalence"] <= 1.0
@@ -1001,7 +1089,258 @@ def test_every_probability_in_a_scenario_response_is_bounded(
     """
     response = client.post(
         f"/api/v1/programs/{scorable_track['id']}/scenarios",
-        json={"lever_keys": ["exposure_gap_identified", "contradictory_study_appears"]},
+        json={
+            "lever_keys": ["exposure_gap_identified", "contradictory_study_appears"],
+            "demo_context": True,
+        },
     )
     assert response.status_code == 200, response.text
     assert_probabilities_bounded(response.json(), minimum_checked=24)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 11. Eligibility, refusal and the prediction contract
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_score_is_refused_without_a_demonstration_context(
+    client: TestClient, api_env: ApiEnv, scorable_track: dict[str, Any]
+) -> None:
+    """If this breaks, a simulation's number appears without being asked for.
+
+    The fixture model is trained on synthetic data. Asking for a score without
+    declaring a demonstration context must return a refusal — ``probability``
+    absent, a machine-readable ``refusal_code``, and a reason a person can
+    read. Not a number with a banner next to it: a banner is something a client
+    can fail to render, and a null is not.
+    """
+    if api_env.model_version is None:
+        pytest.skip(f"no model artifact: {api_env.model_error}")
+
+    response = client.post(
+        f"/api/v1/programs/{scorable_track['id']}/score", json={}
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    assert body["probability"] is None
+    assert body["interval_low"] is None and body["interval_high"] is None
+    assert body["uncertainty"] is None
+    assert body["prediction_contract"] is None
+    assert body["explanation"] is None
+
+    elig = body["eligibility"]
+    assert elig["permitted"] is False
+    assert elig["refusal_code"] == "demo_context_not_selected"
+    assert elig["model_status"] == "demo_only"
+    assert elig["reason"].strip()
+
+
+def test_refusal_still_returns_evidence_review_material(
+    client: TestClient, api_env: ApiEnv, scorable_track: dict[str, Any]
+) -> None:
+    """If this breaks, declining to score becomes declining to be useful.
+
+    The whole argument for a default-deny score policy is that everything
+    *else* the platform knows stays available: completeness, the evidence
+    count, the snapshot id for provenance, the endpoint's estimand. A refusal
+    that blanks the page is a worse product and an easier one to work around.
+    """
+    if api_env.model_version is None:
+        pytest.skip(f"no model artifact: {api_env.model_error}")
+
+    body = client.post(
+        f"/api/v1/programs/{scorable_track['id']}/score", json={}
+    ).json()
+
+    assert body["completeness"]["overall"] is not None
+    assert 0.0 <= body["completeness"]["overall"] <= 1.0
+    assert body["n_evidence_items"] >= 0
+    assert body["feature_snapshot_id"]
+    assert body["estimand"].strip()
+    assert body["evidence_confidence"]
+    assert body["model_usefulness"], "the model's own verdict was dropped"
+    assert body["explanation_unavailable_reason"]
+
+
+def test_scenario_is_refused_when_no_score_may_be_produced(
+    client: TestClient, api_env: ApiEnv, scorable_track: dict[str, Any]
+) -> None:
+    """If this breaks, a scenario reports 'no change' where the truth is 'no estimate'.
+
+    Returning a comparison whose two sides are both null, inside a shape that
+    promises ``delta_probability``, invites a client to render zero.
+    """
+    if api_env.model_version is None:
+        pytest.skip(f"no model artifact: {api_env.model_error}")
+
+    response = client.post(
+        f"/api/v1/programs/{scorable_track['id']}/scenarios",
+        json={"lever_keys": ["independent_replication"]},
+    )
+    assert response.status_code == 409, response.text
+    detail = response.json()["detail"]
+    assert detail["error"] == "scenario_unavailable"
+    assert detail["refusal_code"] == "demo_context_not_selected"
+    assert detail["reason"].strip()
+
+
+def test_served_probability_is_the_functional_the_metrics_describe(
+    score: dict[str, Any], client: TestClient
+) -> None:
+    """If this breaks, the displayed number is not the one that was evaluated.
+
+    The predecessor served ``np.mean(sigmoid(draws))`` while every metric in
+    the artifact — and the driver attribution — described the calibrated
+    plug-in value. The two differ systematically by Jensen's inequality, most
+    for the programmes with the least evidence, which are exactly the ones
+    whose number is read most carefully.
+    """
+    contract = score["prediction_contract"]
+    assert contract["functional"] == "calibrated_plug_in"
+    assert contract["evaluated_functional"] == contract["functional"], (
+        "the served functional and the evaluated functional have diverged"
+    )
+    assert contract["probability"] == pytest.approx(score["probability"])
+
+    # The predictive mean must be present under its own name and must not be
+    # the served value's twin by accident.
+    assert contract["predictive_mean_probability"] is not None
+    assert score["uncertainty"]["predictive_mean_probability"] == pytest.approx(
+        contract["predictive_mean_probability"]
+    )
+    assert contract["functional_gap"] == pytest.approx(
+        contract["predictive_mean_probability"] - contract["probability"]
+    )
+
+    # And the artifact must agree about which functional it reports on.
+    validation = client.get("/api/v1/model/validation").json()
+    assert validation["prediction_contract"]["evaluated_functional"] == (
+        contract["functional"]
+    )
+
+    assert "NOT a prediction interval" in contract["interval_estimand"]
+
+
+def test_explanation_is_checked_against_the_served_number(
+    score: dict[str, Any]
+) -> None:
+    """If this breaks, drivers are shown for a number nobody can see.
+
+    The internal reconstruction check compares a partition of a sum against
+    that sum — both built from the same terms — so it cannot detect that the
+    decomposition targets the wrong quantity. Only the external check can, and
+    a ``None`` there means it did not run rather than that it passed.
+    """
+    explanation = score["explanation"]
+    if explanation is None:
+        pytest.skip(f"no attribution: {score['explanation_unavailable_reason']}")
+
+    assert explanation["external_check_ran"] is True, (
+        "the service did not hand the explainer the number it serves, so the "
+        "only check capable of catching a wrong-quantity explanation was "
+        "skipped"
+    )
+    assert explanation["served_reconstruction_error"] == pytest.approx(0.0, abs=1e-9)
+    assert explanation["explained_quantity"] == "calibrated_plug_in"
+    assert explanation["explained_quantity_description"].strip()
+
+
+def test_portfolio_pagination_and_summary_agree_about_scope(
+    client: TestClient, api_env: ApiEnv
+) -> None:
+    """If this breaks, a page-level mean is read as a portfolio-level one.
+
+    The response field was previously named `total` and returned `len(rows)` —
+    the page size — so a caller asking for 60 rows was told the portfolio held
+    60 programmes when it held 765, with no indication the other 705 existed.
+    The page then described its 60-row mean as covering "every program in the
+    portfolio".
+
+    Three properties are asserted together, because each is useless alone: the
+    portfolio-level count is independent of pagination, the page-level count is
+    not, and the summary block says which of the two it describes.
+    """
+    first = client.get(
+        "/api/v1/portfolio", params={"limit": 5, "offset": 0, "score": False}
+    )
+    assert first.status_code == 200, first.text
+    a = first.json()
+
+    assert a["n_returned"] == len(a["rows"]) == 5
+    assert a["total_matching"] > a["n_returned"], (
+        "this fixture does not have enough programmes to test pagination"
+    )
+    assert a["page_offset"] == 0
+    assert a["page_limit"] == 5
+    assert a["has_more"] is True
+
+    summary = a["page_summary"]
+    assert summary["scope"] == "this_page_only"
+    assert summary["n_rows_on_page"] == a["n_returned"]
+    assert str(a["total_matching"]) in summary["note"], (
+        "the summary does not disclose the portfolio-level denominator it is "
+        "*not* describing"
+    )
+
+    # The portfolio-level count must not move with the page.
+    second = client.get(
+        "/api/v1/portfolio", params={"limit": 5, "offset": 5, "score": False}
+    ).json()
+    assert second["total_matching"] == a["total_matching"]
+    assert second["page_offset"] == 5
+    assert {r["track_id"] for r in second["rows"]}.isdisjoint(
+        {r["track_id"] for r in a["rows"]}
+    ), "consecutive pages overlap, so the ordering is not stable under offset"
+
+    # Walking off the end yields no rows and no further pages, and still
+    # reports the same denominator.
+    tail = client.get(
+        "/api/v1/portfolio",
+        params={"limit": 5, "offset": a["total_matching"], "score": False},
+    ).json()
+    assert tail["rows"] == []
+    assert tail["has_more"] is False
+    assert tail["total_matching"] == a["total_matching"]
+
+
+def test_portfolio_rows_report_refusal_rather_than_a_silent_null(
+    client: TestClient, api_env: ApiEnv
+) -> None:
+    """If this breaks, "not scored" and "refused" are indistinguishable.
+
+    A null probability has two quite different causes: scoring was not
+    requested, or it was requested and declined. A client that cannot tell them
+    apart will render an empty cell for both.
+    """
+    if api_env.model_version is None:
+        pytest.skip(f"no model artifact: {api_env.model_error}")
+
+    unscored = client.get(
+        "/api/v1/portfolio", params={"limit": 3, "score": False}
+    ).json()
+    for row in unscored["rows"]:
+        assert row["probability"] is None
+        assert row["score_permitted"] is None, (
+            "a row that was never scored claims a permission decision"
+        )
+
+    refused = client.get(
+        "/api/v1/portfolio",
+        params={"limit": 3, "score": True, "demo_context": False},
+    ).json()
+    assert refused["page_summary"]["n_refused_on_page"] == len(refused["rows"])
+    for row in refused["rows"]:
+        assert row["probability"] is None
+        assert row["score_permitted"] is False
+        assert row["refusal_code"] == "demo_context_not_selected"
+
+    permitted = client.get(
+        "/api/v1/portfolio",
+        params={"limit": 3, "score": True, "demo_context": True},
+    ).json()
+    assert permitted["page_summary"]["n_refused_on_page"] == 0
+    assert permitted["page_summary"]["n_scored_on_page"] == len(permitted["rows"])
+    for row in permitted["rows"]:
+        assert row["score_permitted"] is True
+        assert row["probability"] is not None
+        assert 0.0 <= row["probability"] <= 1.0

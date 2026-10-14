@@ -195,6 +195,38 @@ export interface CompletenessReport {
   reason_counts: Record<string, number>;
 }
 
+export interface Eligibility {
+  permitted: boolean;
+  model_status: string;
+  refusal_code: string | null;
+  reason: string;
+  is_demonstration: boolean;
+}
+
+export interface PredictionContract {
+  contract_version: string;
+  functional: string;
+  functional_description: string;
+  probability: number;
+  predictive_mean_probability: number | null;
+  functional_gap: number | null;
+  gap_is_material: boolean;
+  gap_note?: string;
+  calibration_scale: string;
+  calibration_method: string;
+  interval_estimand: string;
+  evaluated_functional: string;
+}
+
+export interface ModelStatusRecord {
+  status?: string;
+  may_serve?: boolean;
+  criteria_version?: string;
+  rationale?: string;
+  note?: string;
+  criteria?: Record<string, { passed: boolean; observed: unknown; requirement: string }>;
+}
+
 export interface ScoreOut {
   track_id: string;
   program_id: string;
@@ -204,11 +236,19 @@ export interface ScoreOut {
   estimand: string;
   model_version: string;
   model_family: string;
-  probability: number;
-  interval_low: number;
-  interval_high: number;
+  /**
+   * `null` when the eligibility policy declined to produce a score. A refusal
+   * is the absence of a number, not a zero and not a wide interval — check
+   * `eligibility.permitted` before rendering anything numeric.
+   */
+  probability: number | null;
+  interval_low: number | null;
+  interval_high: number | null;
   interval_level: number;
-  uncertainty: Uncertainty;
+  uncertainty: Uncertainty | null;
+  eligibility: Eligibility;
+  prediction_contract: PredictionContract | null;
+  model_status: ModelStatusRecord;
   explanation: Explanation | null;
   explanation_unavailable_reason: string | null;
   completeness: CompletenessReport;
@@ -306,6 +346,9 @@ export interface ComparatorResponse {
 }
 
 export interface PortfolioRow {
+  /** null when scoring was not requested; false when it was refused. */
+  score_permitted?: boolean | null;
+  refusal_code?: string | null;
   track_id: string;
   program_id: string;
   program_name: string;
@@ -336,7 +379,24 @@ export interface PortfolioResponse {
   endpoint: string;
   estimand: string;
   rows: PortfolioRow[];
-  total: number;
+  /** Rows on this page. */
+  n_returned: number;
+  /** Programmes matching the active filters — the portfolio-level denominator. */
+  total_matching: number;
+  page_offset: number;
+  page_limit: number;
+  has_more: boolean;
+  /** Summaries over this page's rows only. Never portfolio-wide. */
+  page_summary: {
+    scope: string;
+    n_rows_on_page: number;
+    n_scored_on_page: number;
+    n_refused_on_page: number;
+    mean_probability: number | null;
+    mean_interval_width: number | null;
+    n_low_confidence_on_page: number;
+    note: string;
+  };
   is_demonstration: boolean;
   demonstration_note: string | null;
   model_usefulness: { verdict?: string; headline?: string };

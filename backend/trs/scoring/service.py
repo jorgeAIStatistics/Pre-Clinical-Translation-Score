@@ -37,6 +37,7 @@ from trs.db.models.analytics import ModelArtifact, Scenario, ScoreRecord
 from trs.db.models.core import Program, ProgramIndication, Target
 from trs.features.missingness import compute_completeness, grade_evidence_confidence
 from trs.features.spec import MODALITY_GROUPS, TARGET_CLASS_GROUPS
+from trs.modeling.contract import build_contract
 from trs.modeling.uncertainty import (
     DEFAULT_N_IMPUTATIONS,
     DEFAULT_N_PARAM_SAMPLES,
@@ -45,6 +46,7 @@ from trs.modeling.uncertainty import (
 )
 from trs.pipeline.artifacts import ModelBundle, get_active_artifact, load_bundle
 from trs.pipeline.features import build_history_index, materialise_snapshot
+from trs.pipeline.status import check_eligibility
 from trs.scoring.explanation import ExplanationUnavailable, explain
 from trs.scoring.scenarios import apply_overrides, resolve_levers, validate_overrides
 
@@ -64,11 +66,21 @@ class ScoreResult:
     model_version: str
     model_family: str
 
-    probability: float
-    interval_low: float
-    interval_high: float
+    #: ``None`` when the eligibility policy refused to produce a score. A
+    #: refusal is not a zero and not a wide interval; it is the absence of a
+    #: number, with a machine-readable reason in :attr:`eligibility`.
+    probability: float | None
+    interval_low: float | None
+    interval_high: float | None
     interval_level: float
-    uncertainty: dict[str, Any]
+    uncertainty: dict[str, Any] | None
+    #: The eligibility decision from :mod:`trs.pipeline.status`. Always present,
+    #: whether or not a score was produced.
+    eligibility: dict[str, Any]
+    #: What the served number *is*. See :mod:`trs.modeling.contract`.
+    prediction_contract: dict[str, Any] | None
+    #: Model status and the criteria behind it, carried beside every estimate.
+    model_status: dict[str, Any]
 
     explanation: dict[str, Any] | None
     explanation_unavailable_reason: str | None
@@ -137,7 +149,16 @@ class ScoringService:
         user_id: str | None = None,
         request_id: str | None = None,
         compare_families: bool = True,
+        demo_context: bool = False,
     ) -> ScoreResult:
+        """Score one development track, or refuse and say why.
+
+        ``demo_context`` must be set explicitly by the caller to obtain a score
+        from a model trained on synthetic data. There is no default-on and no
+        server-side override: a demonstration number should exist only because
+        someone asked for one in a context that says so. A synthetic-trained
+        model scoring *real* evidence is refused regardless of this flag.
+        """
         track = self.session.get(ProgramIndication, track_id)
         if track is None:
             raise ScoringError(f"No development track {track_id!r}")
@@ -164,9 +185,17 @@ class ScoringService:
         bundle = self.bundle_for(artifact.version)
 
         # ---- features ------------------------------------------------------
-        history = build_history_index(self.session)
+        # The endpoint comes from the artifact, not from the request default:
+        # the historical-rate features are built from resolved outcomes under a
+        # specific endpoint definition, and scoring a track with a snapshot
+        # built under a different one would mix predictors.
+        from trs.cohort.outcomes import ENDPOINTS as _ENDPOINTS
+
+        endpoint_def_for_features = _ENDPOINTS[artifact.endpoint]
+        history = build_history_index(self.session, endpoint_def_for_features)
         snapshot = materialise_snapshot(
-            self.session, track_id, as_of, history=history, overwrite=False
+            self.session, track_id, as_of,
+            endpoint=endpoint_def_for_features, history=history,
         )
         base_row = dict(snapshot.features)
         missingness = dict(snapshot.missingness)
@@ -205,6 +234,72 @@ class ScoringService:
                 ),
             }
 
+        # ---- eligibility ---------------------------------------------------
+        # Decided before any number is computed, so a refusal cannot be a
+        # probability with a warning stapled to it. Evidence review,
+        # completeness and provenance are unaffected and are returned either
+        # way: declining to score is not declining to be useful.
+        report = compute_completeness(missingness)
+        contains_synthetic = bool(snapshot.is_synthetic or bundle.trained_on_synthetic)
+        status_record = (artifact.metrics or {}).get("status", {})
+        eligibility = check_eligibility(
+            status=bundle.status,
+            trained_on_synthetic=bundle.trained_on_synthetic,
+            evidence_is_synthetic=bool(snapshot.is_synthetic),
+            demo_context_selected=demo_context,
+        )
+
+        from trs.cohort.outcomes import ENDPOINTS
+
+        endpoint_def = ENDPOINTS[artifact.endpoint]
+        usefulness = (artifact.metrics or {}).get("usefulness", {})
+
+        if not eligibility.permitted:
+            grade, reasons = grade_evidence_confidence(
+                report,
+                n_evidence_items=snapshot.n_evidence_items,
+                interval_width=None,
+                contains_synthetic=contains_synthetic,
+            )
+            return ScoreResult(
+                track_id=track_id,
+                program_id=track.program_id,
+                program_name=program.name,
+                as_of_date=as_of,
+                endpoint=artifact.endpoint,
+                estimand=endpoint_def.estimand,
+                model_version=artifact.version,
+                model_family=artifact.family,
+                probability=None,
+                interval_low=None,
+                interval_high=None,
+                interval_level=interval_level,
+                uncertainty=None,
+                eligibility=eligibility.to_dict(),
+                prediction_contract=None,
+                model_status=status_record,
+                explanation=None,
+                explanation_unavailable_reason=(
+                    "No score was produced, so there is nothing to explain. "
+                    f"Reason: {eligibility.reason}"
+                ),
+                completeness=report.to_dict(),
+                evidence_confidence=str(grade),
+                confidence_reasons=reasons,
+                feature_snapshot_id=snapshot.id,
+                n_evidence_items=snapshot.n_evidence_items,
+                is_demonstration=contains_synthetic,
+                demonstration_note=None,
+                model_usefulness=usefulness,
+                specification_sensitivity={
+                    "available": False,
+                    "reason": "No score was produced for this programme.",
+                },
+                scenario=None,
+                score_record_id=None,
+                computed_at=utcnow(),
+            )
+
         # ---- prediction ----------------------------------------------------
         rng = np.random.default_rng(self.random_state)
         mech_group = self._mechanism_key(program)
@@ -223,13 +318,15 @@ class ScoringService:
                 bundle.model, bundle.calibrator, bundle.transformer, feature_row,
                 missingness=missingness,
                 evidence_map=snapshot.feature_evidence_map or {},
+                # Hand the explainer the number this response will carry, so
+                # the decomposition is checked against what the reader sees
+                # rather than only against itself.
+                served_probability=uncertainty.probability,
             ).to_dict()
         except ExplanationUnavailable as exc:
             explanation_reason = str(exc)
 
         # ---- completeness and confidence -----------------------------------
-        report = compute_completeness(missingness)
-        contains_synthetic = bool(snapshot.is_synthetic or bundle.trained_on_synthetic)
         grade, reasons = grade_evidence_confidence(
             report,
             n_evidence_items=snapshot.n_evidence_items,
@@ -276,11 +373,6 @@ class ScoringService:
             self.session.flush()
             record_id = record.id
 
-        from trs.cohort.outcomes import ENDPOINTS
-
-        endpoint_def = ENDPOINTS[artifact.endpoint]
-        usefulness = (artifact.metrics or {}).get("usefulness", {})
-
         return ScoreResult(
             track_id=track_id,
             program_id=track.program_id,
@@ -295,6 +387,13 @@ class ScoringService:
             interval_high=uncertainty.interval_high,
             interval_level=interval_level,
             uncertainty=uncertainty.to_dict(),
+            eligibility=eligibility.to_dict(),
+            prediction_contract=build_contract(
+                primary_probability=uncertainty.probability,
+                predictive_mean_probability=uncertainty.predictive_mean_probability,
+                calibration_method=bundle.calibrator.method,
+            ).to_dict(),
+            model_status=status_record,
             explanation=explanation_payload,
             explanation_unavailable_reason=explanation_reason,
             completeness=report.to_dict(),

@@ -109,6 +109,12 @@ def get_validation(
         target_grouped_sensitivity=metrics.get("target_grouped_sensitivity", {}),
         hyperparameter_selection=metrics.get("hyperparameter_selection", {}),
         usefulness=metrics.get("usefulness", {}),
+        protocol=metrics.get("protocol", {}),
+        prediction_contract=metrics.get("prediction_contract", {}),
+        reference_model=metrics.get("reference_model", {}),
+        calibration_audit=metrics.get("calibration_audit", {}),
+        status=metrics.get("status", {}),
+        promotion_criteria=metrics.get("promotion_criteria", {}),
         limitations=metrics.get("limitations", []),
         oracle_benchmark=oracle,
     )

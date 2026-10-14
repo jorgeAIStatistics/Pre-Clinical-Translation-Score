@@ -20,6 +20,46 @@ import type { PortfolioRow } from "@/lib/types";
 
 type SortKey = "program_name" | "probability" | "completeness" | "as_of_date" | "indication";
 
+/**
+ * A sortable column header.
+ *
+ * Defined at module scope, not inside `PortfolioTable`'s render.
+ *
+ * A component created during render has a new identity on every render, so
+ * React unmounts the previous subtree and mounts a fresh one rather than
+ * updating it. For a sort control that is not cosmetic: the header's button is
+ * destroyed and recreated on each sort, which drops keyboard focus to the top
+ * of the document — so a keyboard user sorting a column loses their place
+ * every time they sort. `react-hooks/static-components` flags exactly this,
+ * and the frontend had no linter configured to report it.
+ */
+function SortHead<K extends string>({
+  sortKey, sort, dir, onSort, children, align = "left",
+}: {
+  sortKey: K;
+  sort: K;
+  dir: 1 | -1;
+  onSort: (key: K) => void;
+  children: React.ReactNode;
+  align?: "left" | "right";
+}) {
+  const active = sort === sortKey;
+  return (
+    <Th align={align} ariaSort={active ? (dir === 1 ? "ascending" : "descending") : "none"}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className="inline-flex items-center gap-1 hover:text-ink-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600"
+      >
+        {children}
+        <span aria-hidden className={active ? "text-accent-600" : "text-ink-300"}>
+          {active ? (dir === 1 ? "↑" : "↓") : "↕"}
+        </span>
+      </button>
+    </Th>
+  );
+}
+
 export function PortfolioTable({ rows }: { rows: PortfolioRow[] }) {
   const [sort, setSort] = useState<SortKey>("program_name");
   const [dir, setDir] = useState<1 | -1>(1);
@@ -63,23 +103,6 @@ export function PortfolioTable({ rows }: { rows: PortfolioRow[] }) {
     else { setSort(key); setDir(key === "probability" ? -1 : 1); }
   };
 
-  const SortHead = ({ k, children, align = "left" }: {
-    k: SortKey; children: React.ReactNode; align?: "left" | "right";
-  }) => (
-    <Th align={align}>
-      <button
-        onClick={() => toggle(k)}
-        className="inline-flex items-center gap-1 hover:text-ink-800"
-        aria-sort={sort === k ? (dir === 1 ? "ascending" : "descending") : "none"}
-      >
-        {children}
-        <span aria-hidden className={sort === k ? "text-accent-600" : "text-ink-300"}>
-          {sort === k ? (dir === 1 ? "↑" : "↓") : "↕"}
-        </span>
-      </button>
-    </Th>
-  );
-
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] px-5 py-3">
@@ -118,16 +141,30 @@ export function PortfolioTable({ rows }: { rows: PortfolioRow[] }) {
           </caption>
           <thead>
             <tr>
-              <SortHead k="program_name">Program</SortHead>
+              <SortHead sortKey="program_name" sort={sort} dir={dir} onSort={toggle}>
+                Program
+              </SortHead>
               <Th>Target</Th>
-              <SortHead k="indication">Indication</SortHead>
+              <SortHead sortKey="indication" sort={sort} dir={dir} onSort={toggle}>
+                Indication
+              </SortHead>
               <Th>Modality</Th>
-              <SortHead k="probability" align="right">Risk</SortHead>
+              <SortHead
+                sortKey="probability" sort={sort} dir={dir} onSort={toggle} align="right"
+              >
+                Risk
+              </SortHead>
               <Th className="w-[170px]">95% interval</Th>
               <Th>Confidence</Th>
-              <SortHead k="completeness" align="right">Evidence</SortHead>
+              <SortHead
+                sortKey="completeness" sort={sort} dir={dir} onSort={toggle} align="right"
+              >
+                Evidence
+              </SortHead>
               <Th>Leading risk driver</Th>
-              <SortHead k="as_of_date">Cutoff</SortHead>
+              <SortHead sortKey="as_of_date" sort={sort} dir={dir} onSort={toggle}>
+                Cutoff
+              </SortHead>
             </tr>
           </thead>
           <tbody>
