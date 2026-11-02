@@ -718,3 +718,9 @@ findings.
 demonstration database, or the output of a command reproduced above. Every command in
 [Quickstart](#1-quickstart) and [Make targets](#2-make-targets) was executed against this checkout
 before being written down. All of it describes a synthetic demonstration.*
+
+## Ownership and permissions
+
+Maintained by **Jorge Rodriguez** ([@jorgeAIStatistics](https://github.com/jorgeAIStatistics)).
+See [COPYRIGHT.md](COPYRIGHT.md) for ownership and third-party attribution scope,
+and [LICENSE](LICENSE) for permissions. Existing licensing terms are preserved.
